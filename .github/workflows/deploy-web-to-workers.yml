@@ -12,7 +12,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     name: Deploy
-
+    defaults:
+      run:
+        working-directory: apps/web
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
