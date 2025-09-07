@@ -10,7 +10,9 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # still using ubuntu-latest for runner base
+    container:
+      image: ubuntu:24.04   # Specify Ubuntu 24.04.2 LTS Docker image
     defaults:
       run:
         working-directory: apps/web   # run everything inside apps/web
@@ -57,4 +59,3 @@ jobs:
             workingDirectory: apps/web
             command: deploy .open-next/worker.js
             wranglerVersion: "4.32.0"
-
