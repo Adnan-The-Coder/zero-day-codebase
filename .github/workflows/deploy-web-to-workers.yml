@@ -10,9 +10,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # still using ubuntu-latest for runner base
-    container:
-      image: ubuntu:24.04   # Specify Ubuntu 24.04.2 LTS Docker image
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: apps/web   # run everything inside apps/web
