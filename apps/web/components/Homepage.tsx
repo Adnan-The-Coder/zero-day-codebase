@@ -79,7 +79,7 @@ export default function HomePage() {
             className="order-2 md:order-1"
           >
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl text-start">
-              AI Driven Phishing Detection
+              AI Phishing Detection
             </h2>
             <p className="mt-3 text-white/70">
               Go beyond traditional filters by analyzing content, links, and

@@ -151,7 +151,7 @@ export default function Information() {
         </h2>
         <p className="mx-auto mt-3 max-w-3xl text-sm sm:text-base text-white/70">
           Attackers exploit people, code, and supply chains with increasingly realistic lures. Zero maps signals into a unified{" "}
-          <span className="text-white/90">risk graph</span>, surfaces the most critical paths, and blocks what matters—without the noise.
+          <span className="text-white/90">risk graph</span>, surfaces the most critical paths, and blocks what matters without the noise.
         </p>
         <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] sm:text-xs text-white/70">
           <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,.6)]" />

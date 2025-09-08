@@ -17,7 +17,7 @@ export default function Contact() {
     <section id="contact" className="relative z-10 mx-auto max-w-6xl px-4 py-24">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_40%_at_50%_0%,rgba(156,163,175,0.06),transparent_60%)]"
+        className="pointer-events-none absolute inset-0 -z-10"
       />
       <header className="mb-12 text-center">
         <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
