@@ -2,4 +2,9 @@
 
 body{
   background-color: black;
+  color: white;
+  font-family: "Outfit", sans-serif;
+}
+*{
+  scroll-behavior: smooth;
 }

@@ -1,7 +1,11 @@
+import HomePage from '../../components/Homepage';
+import Navbar from '../../components/Navbar';
+
 export default function Home() {
   return (
     <div>
-      <h1 className="text-white">Welcome to the Dark Side</h1>
+      <Navbar />
+      <HomePage/>
     </div>
   );
 }
