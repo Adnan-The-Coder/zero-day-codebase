@@ -10,10 +10,21 @@ import {
   ArcElement,
   Tooltip,
   Filler,
+  type ChartData,
+  type ChartOptions,
 } from "chart.js";
 import { Line, Doughnut } from "react-chartjs-2";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Filler);
+
+// ✅ move out to avoid useMemo dep warning
+const pieColors: string[] = [
+  "rgba(16,185,129,0.85)", // emerald
+  "rgba(245,158,11,0.85)", // amber
+  "rgba(244,63,94,0.85)",  // rose
+  "rgba(99,102,241,0.85)", // indigo
+  "rgba(156,163,175,0.85)",// gray
+];
 
 export default function Information() {
   const isMobile = useIsMobile();
@@ -38,7 +49,8 @@ export default function Information() {
     return () => clearInterval(id);
   }, []);
 
-  const lineData = useMemo(
+  // ✅ typed data
+  const lineData: ChartData<"line"> = useMemo(
     () => ({
       labels: lineLabels,
       datasets: [
@@ -46,7 +58,7 @@ export default function Information() {
           label: "Incidents (live)",
           data: lineValues,
           borderColor: "rgba(110,231,183,0.9)",
-          backgroundColor: "rgba(16,185,129,0.15)", 
+          backgroundColor: "rgba(16,185,129,0.15)",
           pointRadius: 0,
           tension: 0.35,
           fill: true,
@@ -56,7 +68,8 @@ export default function Information() {
     [lineLabels, lineValues]
   );
 
-  const lineOptions = useMemo(
+  // ✅ typed options
+  const lineOptions: ChartOptions<"line"> = useMemo(
     () => ({
       responsive: true,
       maintainAspectRatio: false,
@@ -96,15 +109,8 @@ export default function Information() {
     [isMobile]
   );
 
-  const pieColors = [
-    "rgba(16,185,129,0.85)", // emerald
-    "rgba(245,158,11,0.85)", // amber
-    "rgba(244,63,94,0.85)",  // rose
-    "rgba(99,102,241,0.85)", // indigo
-    "rgba(156,163,175,0.85)",// gray
-  ];
-
-  const pieData = useMemo(
+  // ✅ also typed, pieColors is static so no dep warning
+  const pieData: ChartData<"doughnut"> = useMemo(
     () => ({
       labels: ["Phishing", "Identity Theft", "Payment Fraud", "Account Takeover", "Other"],
       datasets: [
@@ -118,7 +124,7 @@ export default function Information() {
     [pieValues]
   );
 
-  const pieOptions = useMemo(
+  const pieOptions: ChartOptions<"doughnut"> = useMemo(
     () => ({
       responsive: true,
       cutout: isMobile ? "58%" : "60%",
@@ -138,10 +144,7 @@ export default function Information() {
 
   return (
     <section id="information" className="relative z-10 mx-auto max-w-6xl px-4 py-16 sm:py-20 text-white">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-      />
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10" />
       <header className="mb-8 sm:mb-10 text-center">
         <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight">
           Fraud & scam activity is rising fast
@@ -159,18 +162,20 @@ export default function Information() {
         <Card>
           <h3 className="mb-1 text-xs sm:text-sm font-semibold text-white/80">Incidents over time</h3>
           <p className="mb-3 sm:mb-4 text-[11px] sm:text-xs text-white/50">Live stream • last ~24 ticks</p>
-          <div className={`w-full ${isMobile ? 'h-32' : 'h-48 sm:h-56 md:h-64 lg:h-72'}`}>
-            <Line data={lineData} options={lineOptions as any} />
+          <div className={`w-full ${isMobile ? "h-32" : "h-48 sm:h-56 md:h-64 lg:h-72"}`}>
+            {/* ✅ no 'any' */}
+            <Line data={lineData} options={lineOptions} />
           </div>
         </Card>
         <Card>
           <h3 className="mb-1 text-xs sm:text-sm font-semibold text-white/80">Fraud by category</h3>
-          <p className="mb-3 sm:mb-4 text-[11px] sm:text-xs text-white/50">Live share • adjusts over time</p>
+          <p className="mb-3 sm:mb-4 text:[11px] sm:text-xs text-white/50">Live share • adjusts over time</p>
           <div className="flex items-center gap-4 sm:gap-6">
-            <div className={`${isMobile ? 'h-20 w-20' : 'h-32 w-32 sm:h-40 sm:w-40 md:h-48 md:w-48'}`}>
-              <Doughnut data={pieData} options={pieOptions as any} />
+            <div className={`${isMobile ? "h-20 w-20" : "h-32 w-32 sm:h-40 sm:w-40 md:h-48 md:w-48"}`}>
+              {/* ✅ no 'any' */}
+              <Doughnut data={pieData} options={pieOptions} />
             </div>
-            <Legend 
+            <Legend
               data={[
                 { label: "Phishing", value: pieValues[0] },
                 { label: "Identity Theft", value: pieValues[1] },
@@ -204,10 +209,10 @@ function Card({ children }: { children: React.ReactNode }) {
 function Legend({ data, isMobile }: { data: { label: string; value: number }[]; isMobile: boolean }) {
   const cols = ["bg-emerald-400", "bg-amber-400", "bg-rose-400", "bg-indigo-400", "bg-gray-400"];
   return (
-    <ul className={`text-xs sm:text-sm min-w-[9rem] ${isMobile ? 'space-y-1' : 'space-y-1.5 sm:space-y-2'}`}>
+    <ul className={`text-xs sm:text-sm min-w-[9rem] ${isMobile ? "space-y-1" : "space-y-1.5 sm:space-y-2"}`}>
       {data.map((d, i) => (
         <li key={d.label} className="flex items-center gap-2">
-          <span className={`inline-block ${isMobile ? 'h-1.5 w-1.5' : 'h-2 w-2 sm:h-2.5 sm:w-2.5'} rounded-full ${cols[i % cols.length]}`} />
+          <span className={`inline-block ${isMobile ? "h-1.5 w-1.5" : "h-2 w-2 sm:h-2.5 sm:w-2.5"} rounded-full ${cols[i % cols.length]}`} />
           <span className="text-white/80">{d.label}</span>
           <span className="ml-auto text-white/50">{Math.round(d.value)}%</span>
         </li>
@@ -217,7 +222,7 @@ function Legend({ data, isMobile }: { data: { label: string; value: number }[]; 
 }
 
 function useIsMobile(breakpoint = 640) {
-  const [w, setW] = useState<number>(1024); // safe SSR default
+  const [w, setW] = useState<number>(1024);
   useEffect(() => {
     const onResize = () => setW(window.innerWidth);
     onResize();
@@ -268,7 +273,7 @@ function rebalancePie(vals: number[]) {
     const a = Math.floor(Math.random() * next.length);
     let b = Math.floor(Math.random() * next.length);
     if (a === b) b = (b + 1) % next.length;
-    const delta = Math.random() * 4 - 2; // -2..+2
+    const delta = Math.random() * 4 - 2;
     next[a] = Math.max(2, next[a] + delta);
     next[b] = Math.max(2, next[b] - delta);
   }
