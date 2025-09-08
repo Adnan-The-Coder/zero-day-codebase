@@ -13,6 +13,8 @@
     "nx": "^21.4.1"
   },
   "dependencies": {
-    "framer-motion": "^12.23.12"
+    "chart.js": "^4.5.0",
+    "framer-motion": "^12.23.12",
+    "react-chartjs-2": "^5.3.0"
   }
 }

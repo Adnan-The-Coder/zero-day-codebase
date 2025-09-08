@@ -94,7 +94,7 @@ export default function Pricing() {
           </button>
         </div>
       </header>
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3">
         {plans.map((p, idx) => (
           <motion.div
             key={p.name}
@@ -105,7 +105,7 @@ export default function Pricing() {
             className={[
               "group relative rounded-2xl border backdrop-blur p-6",
               p.highlight
-                ? "border-gray-500 bg-gray-400/[0.06] shadow-[0_0_40px_rgba(16,185,129,.12)]"
+                ? "border-gray-500 bg-white/[0.045] shadow-[0_0_40px_rgba(16,185,129,.12)]"
                 : "border-white/10 bg-white/[0.045]",
             ].join(" ")}
           >

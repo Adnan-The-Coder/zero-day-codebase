@@ -24,7 +24,7 @@ export default function Contact() {
           Get in touch
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-white/70">
-          Questions, demos, partnerships—tell us what you need and we’ll get back within 24–48 hours.
+          Questions, demos, partnerships tell us what you need and we will get back within 24-48 hours.
         </p>
       </header>
       <div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr]">
@@ -99,7 +99,7 @@ export default function Contact() {
                     : "border-white/10 bg-white/5 text-white/60",
                 ].join(" ")}
               >
-                {status === "idle" && "Send message"}
+                {status === "idle" && "Send"}
                 {status === "sending" && "Sending…"}
                 {status === "sent" && "Sent ✓"}
               </button>
@@ -122,8 +122,8 @@ export default function Contact() {
             }
             title="Email"
             content={
-              <Link href="mailto:support@yourbrand.com" className="text-white/80 hover:underline">
-                support@yourbrand.com
+              <Link href="mailto:helpcentresupport@zero.com" className="text-white/80 hover:underline">
+                helpcentresupport@zero.com
               </Link>
             }
           />
@@ -145,7 +145,7 @@ export default function Contact() {
               </svg>
             }
             title="Hours"
-            content={<span className="text-white/70">Mon–Fri • 9:00–18:00 IST</span>}
+            content={<span className="text-white/70">Mon-Fri • 24/7 IST</span>}
           />
 
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.045] p-4">

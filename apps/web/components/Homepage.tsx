@@ -5,6 +5,7 @@ import Link from "next/link";
 import React from "react";
 import Pricing from "./Pricing";
 import Contact from "./Contact";
+import Information from "./Information";
 
 export default function HomePage() {
   return (
@@ -41,7 +42,7 @@ export default function HomePage() {
           transition={{ duration: 0.4, ease: "easeOut", delay: 0.25 }}
         >
           <Link
-            href="/"
+            href="/login"
             className="group relative inline-flex items-center justify-center rounded-2xl px-3 py-3 text-sm font-semibold"
           >
             <span className="absolute inset-0 rounded-2xl" />
@@ -50,7 +51,7 @@ export default function HomePage() {
             </span>
           </Link>
           <Link
-            href="/"
+            href="/dashboard"
             className="rounded-2xl border border-white/15 px-6 py-3 text-sm font-semibold text-white/90 hover:bg-white/5"
           >
             Dashboard Tour
@@ -152,10 +153,9 @@ export default function HomePage() {
           </motion.div>
         </div>
       </section>
-
+      <Information />
       <Pricing />
       <Contact />
-
       <footer className="relative z-10 py-10 text-center text-xs text-white/50">
         © {new Date().getFullYear()} Zero • Built for defenders
       </footer>
@@ -267,7 +267,7 @@ function BackgroundWires() {
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
       <div className="absolute inset-0 bg-[radial-gradient(60%_40%_at_50%_0%,rgba(156,163,175,0.08),transparent_60%)]" />
       <svg
-        className="absolute inset-x-0 top-0 h-[90vh] sm:h-[520px] w-full opacity-45 sm:opacity-[0.22]"
+        className="absolute inset-x-0 top-0 h-[90vh] sm:h-[520px] w-full opacity-45 sm:opacity-[0.22] md:opacity-[0.26] lg:opacity-[0.28]"
         viewBox="0 0 1440 800"
         preserveAspectRatio="none"
       >
@@ -278,13 +278,14 @@ function BackgroundWires() {
             fill="none"
             stroke="url(#grayGradient)"
             strokeWidth="1.2"
+            strokeLinecap="round"
           />
         ))}
         <defs>
           <linearGradient id="grayGradient" x1="0" x2="1">
-            <stop offset="0%" stopColor="rgba(156,163,175,0.16)" /> {/* gray-400 */}
-            <stop offset="50%" stopColor="rgba(209,213,219,0.32)" /> {/* gray-300 */}
-            <stop offset="100%" stopColor="rgba(156,163,175,0.16)" /> {/* gray-400 */}
+            <stop offset="0%" stopColor="rgba(156,163,175,0.16)" />
+            <stop offset="50%" stopColor="rgba(209,213,219,0.32)" />
+            <stop offset="100%" stopColor="rgba(156,163,175,0.16)" />
           </linearGradient>
         </defs>
       </svg>
