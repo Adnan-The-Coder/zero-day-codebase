@@ -193,16 +193,17 @@ function MockCard({
 }
 
 function MockGraph() {
-  const nodes: { x: string; y: string; risk: "High" | "Medium" | "Low" }[] = [
-    { x: "12%", y: "25%", risk: "High" },
-    { x: "82%", y: "28%", risk: "Low" },
-    { x: "22%", y: "74%", risk: "Medium" },
-    { x: "74%", y: "66%", risk: "High" },
+  const nodes: { x: string; y: string; vendor: string; risk: "High" | "Medium" | "Low" }[] = [
+    { x: "12%", y: "25%", vendor: "Acme HR", risk: "High" },
+    { x: "82%", y: "28%", vendor: "CloudX", risk: "Low" },
+    { x: "22%", y: "74%", vendor: "FinPay", risk: "Medium" },
+    { x: "74%", y: "66%", vendor: "BrightCRM", risk: "High" },
   ];
 
   return (
     <div className="relative h-72 rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.02] p-4 shadow-[0_6px_40px_rgba(0,0,0,.4)]">
-      <div className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-gradient-to-b from-white/20 to-white/5 shadow-[0_0_40px_rgba(255,255,255,0.08)]">
+      <div className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-gradient-to-b from-white/20 to-white/5 shadow-[0_0_40px_rgba(255,255,255,0.08)] flex items-center justify-center text-white font-semibold">
+        User
         <div className="absolute inset-0 rounded-full border border-white/10 animate-pulse" />
       </div>
       {nodes.map((n, idx) => (
@@ -210,18 +211,21 @@ function MockGraph() {
           key={idx}
           className="absolute transition-transform duration-300 hover:scale-110"
           style={{ left: n.x, top: n.y }}
-          title={`Risk: ${n.risk}`}
+          title={`${n.vendor} · Risk: ${n.risk}`}
         >
           <div
             className={[
-              "h-12 w-12 rounded-full border backdrop-blur-sm shadow-lg",
+              "h-16 w-16 rounded-full border backdrop-blur-sm shadow-lg flex flex-col items-center justify-center text-[10px] font-medium text-white text-center px-1",
               n.risk === "High"
                 ? "border-rose-400/40 bg-rose-400/15 shadow-[0_0_30px_rgba(244,63,94,.35)] animate-pulse"
                 : n.risk === "Medium"
                 ? "border-amber-300/40 bg-amber-300/12 shadow-[0_0_24px_rgba(252,211,77,.25)]"
                 : "border-emerald-300/40 bg-emerald-300/12 shadow-[0_0_24px_rgba(110,231,183,.25)]",
             ].join(" ")}
-          />
+          >
+            <span>{n.vendor}</span>
+            <span className="text-[9px] opacity-80">{n.risk}</span>
+          </div>
         </div>
       ))}
       <svg
@@ -236,27 +240,10 @@ function MockGraph() {
             <stop offset="100%" stopColor="rgba(99,102,241,0.2)" />
           </linearGradient>
         </defs>
-
-        <path
-          d="M300 140 C 220 120, 120 110, 60 70"
-          stroke="url(#lineGrad)"
-          strokeWidth="1.4"
-        />
-        <path
-          d="M300 140 C 420 120, 520 110, 560 85"
-          stroke="url(#lineGrad)"
-          strokeWidth="1.4"
-        />
-        <path
-          d="M300 140 C 210 180, 120 210, 60 220"
-          stroke="url(#lineGrad)"
-          strokeWidth="1.4"
-        />
-        <path
-          d="M300 140 C 420 180, 520 210, 560 200"
-          stroke="url(#lineGrad)"
-          strokeWidth="1.4"
-        />
+        <path d="M300 140 C 220 120, 120 110, 60 70" stroke="url(#lineGrad)" strokeWidth="1.4" />
+        <path d="M300 140 C 420 120, 520 110, 560 85" stroke="url(#lineGrad)" strokeWidth="1.4" />
+        <path d="M300 140 C 210 180, 120 210, 60 220" stroke="url(#lineGrad)" strokeWidth="1.4" />
+        <path d="M300 140 C 420 180, 520 210, 560 200" stroke="url(#lineGrad)" strokeWidth="1.4" />
       </svg>
     </div>
   );
