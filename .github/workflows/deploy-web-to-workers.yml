@@ -1,4 +1,4 @@
-name: Deploy apps/web to Cloudflare Workers
+name: Automated Web App Deployment to Cloudflare Workers
 
 on:
   push:
