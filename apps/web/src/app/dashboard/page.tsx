@@ -29,8 +29,16 @@ ChartJS.register(
   Legend
 );
 
-const Badge = ({ children, color = "neutral" }: { children: React.ReactNode; color?: "red" | "amber" | "green" | "blue" | "neutral" }) => {
-  const map: Record<string, string> = {
+type BadgeColor = "red" | "amber" | "green" | "blue" | "neutral";
+
+const Badge = ({
+  children,
+  color = "neutral",
+}: {
+  children: React.ReactNode;
+  color?: BadgeColor; // <- use union type
+}) => {
+  const map: Record<BadgeColor, string> = {
     red: "bg-red-500/15 text-red-400 ring-1 ring-red-500/30",
     amber: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30",
     green: "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30",
@@ -38,12 +46,26 @@ const Badge = ({ children, color = "neutral" }: { children: React.ReactNode; col
     neutral: "bg-white/5 text-white/70 ring-1 ring-white/10",
   };
   return (
-    <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${map[color]}`}>{children}</span>
+    <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${map[color]}`}>
+      {children}
+    </span>
   );
 };
 
-const Icon = ({ path, className = "h-5 w-5" }: { path: string; className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6">
+const Icon = ({
+  path,
+  className = "h-5 w-5",
+}: {
+  path: string;
+  className?: string;
+}) => (
+  <svg
+    viewBox="0 0 24 24"
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+  >
     <path d={path} strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
@@ -55,27 +77,30 @@ export default function Page() {
   // Gauge-like doughnut (Phishing)
   const phishingScore = 87;
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const phishingGauge = useMemo(() => ({
-    data: {
-      labels: ["Score", "Remaining"],
-      datasets: [
-        {
-          data: [phishingScore, 100 - phishingScore],
-          backgroundColor: ["#ef4444", "#1f2937"],
-          borderWidth: 0,
-          hoverOffset: 0,
-          circumference: 240,
-          rotation: 240 / 2 + 90,
-          cutout: "70%",
-        },
-      ],
-    },
-    options: {
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
-      responsive: true,
-      maintainAspectRatio: false,
-    },
-  }), [phishingScore]);
+  const phishingGauge = useMemo(
+    () => ({
+      data: {
+        labels: ["Score", "Remaining"],
+        datasets: [
+          {
+            data: [phishingScore, 100 - phishingScore],
+            backgroundColor: ["#ef4444", "#1f2937"],
+            borderWidth: 0,
+            hoverOffset: 0,
+            circumference: 240,
+            rotation: 240 / 2 + 90,
+            cutout: "70%",
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    }),
+    [phishingScore]
+  );
 
   // Flags bar
   const flagsBar = {
@@ -94,7 +119,11 @@ export default function Page() {
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
-        y: { grid: { color: "rgba(255,255,255,0.06)" }, ticks: { color: "#9CA3AF" }, suggestedMax: 70 },
+        y: {
+          grid: { color: "rgba(255,255,255,0.06)" },
+          ticks: { color: "#9CA3AF" },
+          suggestedMax: 70,
+        },
       },
       responsive: true,
       maintainAspectRatio: false,
@@ -114,7 +143,11 @@ export default function Page() {
         },
       ],
     },
-    options: { plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false },
+    options: {
+      plugins: { legend: { display: false } },
+      responsive: true,
+      maintainAspectRatio: false,
+    },
   };
 
   // Vendor risk over time (line)
@@ -161,7 +194,11 @@ export default function Page() {
         },
       ],
     },
-    options: { plugins: { legend: { display: false }, tooltip: { enabled: false } }, responsive: true, maintainAspectRatio: false },
+    options: {
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      responsive: true,
+      maintainAspectRatio: false,
+    },
   };
 
   // Compliance trend
@@ -196,10 +233,19 @@ export default function Page() {
     data: {
       labels: ["High", "Medium", "Low"],
       datasets: [
-        { data: [27, 45, 28], backgroundColor: ["#ef4444", "#f59e0b", "#22c55e"], borderWidth: 0, cutout: "65%" },
+        {
+          data: [27, 45, 28],
+          backgroundColor: ["#ef4444", "#f59e0b", "#22c55e"],
+          borderWidth: 0,
+          cutout: "65%",
+        },
       ],
     },
-    options: { plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false },
+    options: {
+      plugins: { legend: { display: false } },
+      responsive: true,
+      maintainAspectRatio: false,
+    },
   };
 
   // Incident trends
@@ -251,10 +297,18 @@ export default function Page() {
             <Icon path="M4 6h16M4 12h16M4 18h16" />
           </button>
           <Link href={`/dashboard`} className="flex items-center justify-center gap-1">
-            <Image src={`/assets/logo.png`} alt="logo" width={10000} height={10000} className="w-8 h-8"/>
-            <span className="text-sm font-semibold tracking-wide text-white/90 mr-1">Zero Console</span>
+            <Image
+              src={`/assets/logo.png`}
+              alt="logo"
+              width={10000}
+              height={10000}
+              className="w-8 h-8"
+            />
+            <span className="text-sm font-semibold tracking-wide text-white/90 mr-1">
+              Zero Console
+            </span>
           </Link>
-            <Badge color="green">Operational</Badge>
+          <Badge color="green">Operational</Badge>
           <div className="ml-auto flex items-center gap-2">
             <div className="relative">
               <button
@@ -270,8 +324,12 @@ export default function Page() {
                     Notifications
                   </div>
                   <div className="divide-y divide-white/10 text-xs text-white/80">
-                    <div className="p-2 hover:bg-white/5">✅ Deployment succeeded — v0.8.3 live.</div>
-                    <div className="p-2 hover:bg-white/5">🔒 New login detected from Hyderabad.</div>
+                    <div className="p-2 hover:bg-white/5">
+                      ✅ Deployment succeeded — v0.8.3 live.
+                    </div>
+                    <div className="p-2 hover:bg-white/5">
+                      🔒 New login detected from Hyderabad.
+                    </div>
                   </div>
                 </div>
               )}
@@ -285,17 +343,36 @@ export default function Page() {
           <nav className="sticky top-14 flex h-[calc(100vh-56px)] flex-col gap-2 p-3">
             {[
               { label: "Overview", icon: "M3 12h18M12 3v18", link: "#overview" },
-              { label: "Phishing", icon: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M9 12h6", link: "#phishing" },
-              { label: "Vendors", icon: "M3 7h18M3 12h18M3 17h18", link: "#vendors" },
+              {
+                label: "Phishing",
+                icon: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M9 12h6",
+                link: "#phishing",
+              },
+              {
+                label: "Vendors",
+                icon: "M3 7h18M3 12h18M3 17h18",
+                link: "#vendors",
+              },
               { label: "Compliance", icon: "M5 13l4 4L19 7", link: "#compliance" },
-              { label: "Incidents", icon: "M12 9v4m0 4h.01M5 12a7 7 0 1 0 14 0 7 7 0 0 0-14 0z", link: "#incidents" },
+              {
+                label: "Incidents",
+                icon:
+                  "M12 9v4m0 4h.01M5 12a7 7 0 1 0 14 0 7 7 0 0 0-14 0z",
+                link: "#incidents",
+              },
             ].map((i, idx) => (
-              <Link key={idx} href={i.link} className="group flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 ring-1 ring-inset ring-white/10 hover:bg-white/5">
+              <Link
+                key={idx}
+                href={i.link}
+                className="group flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 ring-1 ring-inset ring-white/10 hover:bg-white/5"
+              >
                 <Icon className="h-5 w-5 text-white/60" path={i.icon} />
                 <span>{i.label}</span>
               </Link>
             ))}
-            <div className="mt-auto text-xs text-white/40">© {new Date().getFullYear()} Zero • Built for defenders</div>
+            <div className="mt-auto text-xs text-white/40">
+              © {new Date().getFullYear()} Zero • Built for defenders
+            </div>
           </nav>
         </aside>
 
@@ -319,27 +396,62 @@ export default function Page() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mb-3 flex items-center justify-between">
-                <Link href={`/dashboard`} className="flex items-center gap-1">
-                  <Image src={`/assets/logo.png`} alt="logo" width={10000} height={10000} className="w-8 h-8"/>
-                  <span className="text-sm font-semibold">Zero</span>
-                </Link>
-                  <button onClick={() => setOpen(false)} className="rounded-lg p-2 hover:bg-white/5">
+                  <Link href={`/dashboard`} className="flex items-center gap-1">
+                    <Image
+                      src={`/assets/logo.png`}
+                      alt="logo"
+                      width={10000}
+                      height={10000}
+                      className="w-8 h-8"
+                    />
+                    <span className="text-sm font-semibold">Zero</span>
+                  </Link>
+                  <button
+                    onClick={() => setOpen(false)}
+                    className="rounded-lg p-2 hover:bg-white/5"
+                  >
                     <Icon path="M6 18L18 6M6 6l12 12" />
                   </button>
                 </div>
                 <div className="flex flex-col gap-2">
                   {[
-                    { label: "Overview", icon: "M3 12h18M12 3v18", link: "#overview" },
-                    { label: "Phishing", icon: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M9 12h6", link: "#phishing" },
-                    { label: "Vendors", icon: "M3 7h18M3 12h18M3 17h18", link: "#vendors" },
-                    { label: "Compliance", icon: "M5 13l4 4L19 7", link: "#compliance" },
-                    { label: "Incidents", icon: "M12 9v4m0 4h.01M5 12a7 7 0 1 0 14 0 7 7 0 0 0-14 0z", link: "#incidents" },
-                    ].map((i, idx) => (
-                    <Link key={idx} href={i.link} className="group flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 ring-1 ring-inset ring-white/10 hover:bg-white/5">
-                        <Icon className="h-5 w-5 text-white/60" path={i.icon} />
-                        <span>{i.label}</span>
+                    {
+                      label: "Overview",
+                      icon: "M3 12h18M12 3v18",
+                      link: "#overview",
+                    },
+                    {
+                      label: "Phishing",
+                      icon:
+                        "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M9 12h6",
+                      link: "#phishing",
+                    },
+                    {
+                      label: "Vendors",
+                      icon: "M3 7h18M3 12h18M3 17h18",
+                      link: "#vendors",
+                    },
+                    {
+                      label: "Compliance",
+                      icon: "M5 13l4 4L19 7",
+                      link: "#compliance",
+                    },
+                    {
+                      label: "Incidents",
+                      icon:
+                        "M12 9v4m0 4h.01M5 12a7 7 0 1 0 14 0 7 7 0 0 0-14 0z",
+                      link: "#incidents",
+                    },
+                  ].map((i, idx) => (
+                    <Link
+                      key={idx}
+                      href={i.link}
+                      className="group flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 ring-1 ring-inset ring-white/10 hover:bg-white/5"
+                    >
+                      <Icon className="h-5 w-5 text-white/60" path={i.icon} />
+                      <span>{i.label}</span>
                     </Link>
-                    ))}
+                  ))}
                 </div>
               </motion.aside>
             </motion.div>
@@ -347,7 +459,10 @@ export default function Page() {
         </AnimatePresence>
 
         {/* Main */}
-        <main className="min-h-[calc(100vh-56px)] bg-[#09080b] to-transparent p-2 lg:p-3" id="phishing">
+        <main
+          className="min-h-[calc(100vh-56px)] bg-[#09080b] to-transparent p-2 lg:p-3"
+          id="phishing"
+        >
           <div className="grid grid-cols-1 gap-6">
             {/* Row 1: AI-Driven Phishing Detection */}
             <section className="rounded-2xl border border-white/10 bg-black/80 p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)]">
@@ -362,7 +477,7 @@ export default function Page() {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_200px]">
                     <textarea
                       placeholder="Paste suspicious email or message"
-                      className="min-h-[120px] w-full resize-none rounded-lg border border-white/10 bg-black/40 p-3 text-sm outline-none placeholder:text-white/40"
+                      className="min-h[120px] w-full resize-none rounded-lg border border-white/10 bg-black/40 p-3 text-sm outline-none placeholder:text-white/40"
                     />
                     <div className="flex flex-col gap-3">
                       <div className="flex gap-2">
@@ -370,9 +485,13 @@ export default function Page() {
                           className="w-full rounded-lg border border-white/10 bg-black/40 p-2 text-sm outline-none placeholder:text-white/40"
                           placeholder="Add suspicious URL"
                         />
-                        <button className="rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/10">+</button>
+                        <button className="rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/10">
+                          +
+                        </button>
                       </div>
-                      <button className="rounded-lg bg-white/10 px-3 py-2 text-sm hover:bg-white/15">Run Analysis</button>
+                      <button className="rounded-lg bg-white/10 px-3 py-2 text-sm hover:bg-white/15">
+                        Run Analysis
+                      </button>
                     </div>
                   </div>
                   <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -386,13 +505,17 @@ export default function Page() {
                     <div className="grid grid-cols-1 gap-4">
                       <div className="h-28 rounded-xl border border-white/10 bg-black/40 p-3">
                         <p className="mb-1 text-xs text-white/60">Flags by Type</p>
-                        <div className="h-[72px]"><Bar {...flagsBar} /></div>
+                        <div className="h-[72px]">
+                          <Bar {...flagsBar} />
+                        </div>
                       </div>
                       <div className="h-28 rounded-xl border border-white/10 bg-black/40 p-3">
                         <p className="mb-1 text-xs text-white/60">Verdict Distribution</p>
                         <div className="relative h-[72px]">
                           <Doughnut {...verdictDonut} />
-                          <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm">64</div>
+                          <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm">
+                            64
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -401,7 +524,9 @@ export default function Page() {
 
                 {/* Right: URL table */}
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                  <p className="mb-3 text-sm font-semibold text-white/80">Flagged URLs</p>
+                  <p className="mb-3 text-sm font-semibold text-white/80">
+                    Flagged URLs
+                  </p>
                   <div className="overflow-auto">
                     <table className="w-full text-sm">
                       <thead className="text-left text-white/60">
@@ -413,15 +538,31 @@ export default function Page() {
                       </thead>
                       <tbody className="divide-y divide-white/10">
                         {[
-                          { url: "hxtp://exarnple.com/login", issue: "Impersonation", risk: "High", color: "red" },
-                          { url: "hxxps://secure.example.net/", issue: "Deceptive Link", risk: "Medium", color: "amber" },
-                          { url: "hxxp://billing.exarnple.co", issue: "Typosquatting", risk: "High", color: "red" },
+                          {
+                            url: "hxtp://exarnple.com/login",
+                            issue: "Impersonation",
+                            risk: "High",
+                            color: "red",
+                          },
+                          {
+                            url: "hxxps://secure.example.net/",
+                            issue: "Deceptive Link",
+                            risk: "Medium",
+                            color: "amber",
+                          },
+                          {
+                            url: "hxxp://billing.exarnple.co",
+                            issue: "Typosquatting",
+                            risk: "High",
+                            color: "red",
+                          },
                         ].map((r, i) => (
                           <tr key={i} className="hover:bg-white/[0.03]">
                             <td className="py-2 pr-3 text-white/80">{r.url}</td>
                             <td className="py-2 pr-3 text-white/70">{r.issue}</td>
                             <td className="py-2">
-                              <Badge color={r.color as any}>{r.risk}</Badge>
+                              {/* ---- Replaced `as any` with union type cast ---- */}
+                              <Badge color={r.color as BadgeColor}>{r.risk}</Badge>
                             </td>
                           </tr>
                         ))}
@@ -437,8 +578,12 @@ export default function Page() {
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Supply Chain Mapping</h2>
                 <div className="flex items-center gap-2">
-                  <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">Export</button>
-                  <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">View</button>
+                  <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
+                    Export
+                  </button>
+                  <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
+                    View
+                  </button>
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -447,13 +592,35 @@ export default function Page() {
                   <div className="relative h-64 rounded-lg bg-black/40">
                     {/* center */}
                     <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/20 ring-2 ring-emerald-500/40" />
-                    <span className="absolute left-1/2 top-[calc(50%+44px)] -translate-x-1/2 text-xs text-white/80">Your Organization</span>
+                    <span className="absolute left-1/2 top-[calc(50%+44px)] -translate-x-1/2 text-xs text-white/80">
+                      Your Organization
+                    </span>
                     {/* nodes */}
                     {[
-                      { x: "20%", y: "18%", label: "Acme Corp", color: "bg-red-500/20 ring-red-500/40" },
-                      { x: "78%", y: "26%", label: "Tech Innovations", color: "bg-amber-500/20 ring-amber-500/40" },
-                      { x: "22%", y: "74%", label: "SecureSoft", color: "bg-sky-500/20 ring-sky-500/40" },
-                      { x: "82%", y: "68%", label: "Global Insights", color: "bg-emerald-500/20 ring-emerald-500/40" },
+                      {
+                        x: "20%",
+                        y: "18%",
+                        label: "Acme Corp",
+                        color: "bg-red-500/20 ring-red-500/40",
+                      },
+                      {
+                        x: "78%",
+                        y: "26%",
+                        label: "Tech Innovations",
+                        color: "bg-amber-500/20 ring-amber-500/40",
+                      },
+                      {
+                        x: "22%",
+                        y: "74%",
+                        label: "SecureSoft",
+                        color: "bg-sky-500/20 ring-sky-500/40",
+                      },
+                      {
+                        x: "82%",
+                        y: "68%",
+                        label: "Global Insights",
+                        color: "bg-emerald-500/20 ring-emerald-500/40",
+                      },
                     ].map((n, i) => (
                       <div key={i} className="absolute" style={{ left: n.x, top: n.y }}>
                         <div className={`h-10 w-10 rounded-full ring-2 ${n.color}`} />
@@ -509,9 +676,13 @@ export default function Page() {
                         { label: "Tech Innovations", ts: "1d ago", level: "Med", color: "amber" },
                         { label: "Global Insights", ts: "1d ago", level: "High", color: "red" },
                       ].map((a, i) => (
-                        <div key={i} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-3 py-2">
+                        <div
+                          key={i}
+                          className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-3 py-2"
+                        >
                           <div className="flex items-center gap-2">
-                            <Badge color={a.color as any}>{a.level}</Badge>
+                            {/* ---- Replaced `as any` with union type cast ---- */}
+                            <Badge color={a.color as BadgeColor}>{a.level}</Badge>
                             <span className="text-sm text-white/80">{a.label}</span>
                           </div>
                           <span className="text-xs text-white/50">{a.ts}</span>
@@ -521,7 +692,9 @@ export default function Page() {
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                     <p className="mb-2 text-sm font-semibold">Vendor Risk Over Time</p>
-                    <div className="h-32"><Line {...vendorRiskLine} /></div>
+                    <div className="h-32">
+                      <Line {...vendorRiskLine} />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -540,7 +713,9 @@ export default function Page() {
                       <Doughnut {...complianceGauge} />
                       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                         <div className="text-4xl font-bold">{complianceScore}</div>
-                        <div className="text-xs text-white/80">OVERALL SECURITY COMPLIANCE</div>
+                        <div className="text-xs text-white/80">
+                          OVERALL SECURITY COMPLIANCE
+                        </div>
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -552,9 +727,14 @@ export default function Page() {
                         ["Password Policy", false],
                         ["Device Encryption", true],
                       ].map(([label, ok], i) => (
-                        <div key={i} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm">
+                        <div
+                          key={i}
+                          className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm"
+                        >
                           <span className="text-white/80">{label as string}</span>
-                          <span className={ok ? "text-emerald-400" : "text-red-400"}>{ok ? "Enabled" : "Disabled"}</span>
+                          <span className={ok ? "text-emerald-400" : "text-red-400"}>
+                            {ok ? "Enabled" : "Disabled"}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -571,7 +751,8 @@ export default function Page() {
                     ].map(([label, v], i) => (
                       <div key={i}>
                         <div className="mb-1 flex items-center justify-between text-xs text-white/70">
-                          <span>{label as string}</span><span>{v as number}%</span>
+                          <span>{label as string}</span>
+                          <span>{v as number}%</span>
                         </div>
                         <div className="h-2 w-full rounded bg-white/10">
                           <motion.div
@@ -597,8 +778,12 @@ export default function Page() {
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Incident Tracker</h2>
                 <div className="flex items-center gap-2">
-                  <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">Export</button>
-                  <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">Add incident</button>
+                  <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
+                    Export
+                  </button>
+                  <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
+                    Add incident
+                  </button>
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -613,7 +798,10 @@ export default function Page() {
                       ["Medium", "55"],
                       ["Low", "35"],
                     ].map(([k, v], i) => (
-                      <div key={i} className="rounded-lg border border-white/10 bg-black/40 p-2">
+                      <div
+                        key={i}
+                        className="rounded-lg border border-white/10 bg-black/40 p-2"
+                      >
                         <div className="text-[11px] text-white/60">{k}</div>
                         <div className="text-xl font-semibold">{v}</div>
                       </div>
@@ -642,7 +830,9 @@ export default function Page() {
                         ].map((r, i) => (
                           <tr key={i} className="hover:bg-white/[0.03]">
                             {r.map((c, j) => (
-                              <td key={j} className="px-3 py-2">{c}</td>
+                              <td key={j} className="px-3 py-2">
+                                {c}
+                              </td>
                             ))}
                           </tr>
                         ))}
@@ -660,7 +850,9 @@ export default function Page() {
                     <p className="mb-2 text-sm font-semibold">Incident Severity</p>
                     <div className="relative h-40">
                       <Doughnut {...severityDonut} />
-                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm">27% Low</div>
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm">
+                        27% Low
+                      </div>
                     </div>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
@@ -671,7 +863,10 @@ export default function Page() {
                         ["INC-0102 marked as Resolved", "6h ago"],
                         ["INC-0127 status changed to Open", "1d ago"],
                       ].map((l, i) => (
-                        <div key={i} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-3 py-2">
+                        <div
+                          key={i}
+                          className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-3 py-2"
+                        >
                           <span className="text-sm text-white/80">{l[0]}</span>
                           <span className="text-xs text-white/50">{l[1]}</span>
                         </div>
@@ -681,7 +876,6 @@ export default function Page() {
                 </div>
               </div>
             </section>
-
           </div>
         </main>
       </div>
