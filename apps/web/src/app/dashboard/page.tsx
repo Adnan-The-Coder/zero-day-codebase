@@ -54,6 +54,7 @@ export default function Page() {
   // ------- Charts (all inline so this stays one file) -------
   // Gauge-like doughnut (Phishing)
   const phishingScore = 87;
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const phishingGauge = useMemo(() => ({
     data: {
       labels: ["Score", "Remaining"],
@@ -255,7 +256,26 @@ export default function Page() {
           </Link>
             <Badge color="green">Operational</Badge>
           <div className="ml-auto flex items-center gap-2">
-            <button className="bg-[#141417] p-2 rounded-2xl hover:bg-[#1a1a1f]"><Bell size={20}/></button>
+            <div className="relative">
+              <button
+                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                className="bg-[#141417] p-2 cursor-pointer rounded-2xl hover:bg-[#1a1a1f]"
+              >
+                <Bell size={20} />
+              </button>
+
+              {isNotifOpen && (
+                <div className="absolute right-0 mt-2 w-60 rounded-xl bg-[#060707] shadow-lg border border-white/10 z-50">
+                  <div className="p-3 text-white/90 font-semibold border-b border-white/10 text-sm">
+                    Notifications
+                  </div>
+                  <div className="divide-y divide-white/10 text-xs text-white/80">
+                    <div className="p-2 hover:bg-white/5">✅ Deployment succeeded — v0.8.3 live.</div>
+                    <div className="p-2 hover:bg-white/5">🔒 New login detected from Hyderabad.</div>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="ml-1 h-8 w-8 rounded-full bg-gradient-to-br from-white/20 to-white/5 ring-1 ring-white/10" />
           </div>
         </div>
