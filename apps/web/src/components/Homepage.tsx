@@ -46,7 +46,7 @@ export default function HomePage() {
             className="group relative inline-flex items-center justify-center rounded-2xl px-3 py-3 text-sm font-semibold"
           >
             <span className="absolute inset-0 rounded-2xl" />
-            <span className="relative rounded-2xl border border-white/20 px-6 py-3 text-white">
+            <span className="relative rounded-2xl border hover:bg-white/5 border-white/20 px-6 py-3 text-white">
               Explore
             </span>
           </Link>
