@@ -15,7 +15,6 @@ import {
 } from "chart.js";
 import { Doughnut, Bar, Line } from "react-chartjs-2";
 import Image from "next/image";
-import { BiNotification } from "react-icons/bi";
 import { Bell } from "lucide-react";
 import Link from "next/link";
 
