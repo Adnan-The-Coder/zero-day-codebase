@@ -302,9 +302,9 @@ export default function Page() {
               alt="logo"
               width={10000}
               height={10000}
-              className="w-8 h-8"
+              className="w-9 h-9"
             />
-            <span className="text-sm font-semibold tracking-wide text-white/90 mr-1">
+            <span className="text-lg font-semibold tracking-wide text-white/90 mr-1">
               Zero Console
             </span>
           </Link>
