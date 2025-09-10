@@ -46,7 +46,7 @@ const Badge = ({
     neutral: "bg-white/5 text-white/70 ring-1 ring-white/10",
   };
   return (
-    <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${map[color]}`}>
+    <span className={`hidden md:inline px-2 py-0.5 rounded-md text-xs font-medium ${map[color]}`}>
       {children}
     </span>
   );
@@ -302,9 +302,9 @@ export default function Page() {
               alt="logo"
               width={10000}
               height={10000}
-              className="w-9 h-9"
+              className="w-7 h-7 sm:w-9 sm:h-9"
             />
-            <span className="text-lg font-semibold tracking-wide text-white/90 mr-1">
+            <span className="text-sm md:text-lg font-semibold tracking-wide text-white/90 mr-1">
               Zero Console
             </span>
           </Link>
