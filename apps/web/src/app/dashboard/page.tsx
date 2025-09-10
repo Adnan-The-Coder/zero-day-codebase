@@ -291,7 +291,7 @@ export default function Page() {
         <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-3 px-4">
           <button
             onClick={() => setOpen(true)}
-            className="lg:hidden -ml-1 rounded-lg p-2 hover:bg-white/5"
+            className="xl:hidden -ml-1 rounded-xl p-2 hover:bg-white/5"
             aria-label="Open sidebar"
           >
             <Icon path="M4 6h16M4 12h16M4 18h16" />
@@ -319,7 +319,7 @@ export default function Page() {
               </button>
 
               {isNotifOpen && (
-                <div className="absolute right-0 mt-2 w-60 rounded-xl bg-[#060707] shadow-lg border border-white/10 z-50">
+                <div className="absolute right-0 mt-2 w-60 rounded-xl bg-[#060707] shadow-xl border border-white/10 z-50">
                   <div className="p-3 text-white/90 font-semibold border-b border-white/10 text-sm">
                     Notifications
                   </div>
@@ -338,8 +338,8 @@ export default function Page() {
           </div>
         </div>
       </div>
-      <div className="mx-auto grid max-w-[1400px] grid-cols-1 lg:grid-cols-[240px_1fr]">
-        <aside className="hidden lg:block border-r border-white/10">
+      <div className="mx-auto grid max-w-[1400px] grid-cols-1 xl:grid-cols-[240px_1fr]">
+        <aside className="hidden xl:block border-r border-white/10">
           <nav className="sticky top-14 flex h-[calc(100vh-56px)] flex-col gap-2 p-3">
             {[
               { label: "Overview", icon: "M3 12h18M12 3v18", link: "#overview" },
@@ -383,7 +383,7 @@ export default function Page() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 lg:hidden"
+              className="fixed inset-0 z-50 xl:hidden"
               onClick={() => setOpen(false)}
             >
               <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
@@ -408,7 +408,7 @@ export default function Page() {
                   </Link>
                   <button
                     onClick={() => setOpen(false)}
-                    className="rounded-lg p-2 hover:bg-white/5"
+                    className="rounded-xl p-2 hover:bg-white/5"
                   >
                     <Icon path="M6 18L18 6M6 6l12 12" />
                   </button>
@@ -460,36 +460,36 @@ export default function Page() {
 
         {/* Main */}
         <main
-          className="min-h-[calc(100vh-56px)] bg-[#09080b] to-transparent p-2 lg:p-3"
+          className="min-h-[calc(100vh-56px)] bg-[#09080b] to-transparent p-2 xl:p-3"
           id="phishing"
         >
           <div className="grid grid-cols-1 gap-6">
             {/* Row 1: AI-Driven Phishing Detection */}
             <section className="rounded-2xl border border-white/10 bg-black/80 p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)]">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">AI Phishing Detection</h2>
+                <h2 className="text-xl font-semibold">AI Phishing Detection</h2>
                 <Badge color="green">Operational</Badge>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_1fr]">
+              <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_1fr]">
                 {/* Left: Input + Gauge */}
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_200px]">
                     <textarea
                       placeholder="Paste suspicious email or message"
-                      className="min-h[120px] w-full resize-none rounded-lg border border-white/10 bg-black/40 p-3 text-sm outline-none placeholder:text-white/40"
+                      className="min-h[120px] w-full resize-none rounded-xl border border-white/10 bg-black/40 p-3 text-sm outline-none placeholder:text-white/40"
                     />
                     <div className="flex flex-col gap-3">
                       <div className="flex gap-2">
                         <input
-                          className="w-full rounded-lg border border-white/10 bg-black/40 p-2 text-sm outline-none placeholder:text-white/40"
+                          className="w-full rounded-xl border border-white/10 bg-black/40 p-2 text-sm outline-none placeholder:text-white/40"
                           placeholder="Add suspicious URL"
                         />
-                        <button className="rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/10">
+                        <button className="rounded-xl border border-white/10 px-3 py-2 text-sm hover:bg-white/10">
                           +
                         </button>
                       </div>
-                      <button className="rounded-lg bg-white/10 px-3 py-2 text-sm hover:bg-white/15">
+                      <button className="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/15">
                         Run Analysis
                       </button>
                     </div>
@@ -576,20 +576,20 @@ export default function Page() {
             {/* Row 2: Supply Chain Vulnerability Mapping */}
             <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="vendors">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Supply Chain Mapping</h2>
+                <h2 className="text-xl font-semibold">Supply Chain Mapping</h2>
                 <div className="flex items-center gap-2">
-                  <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
+                  <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
                     Export
                   </button>
-                  <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
+                  <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
                     View
                   </button>
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                   {/* Simple relationship map */}
-                  <div className="relative h-64 rounded-lg bg-black/40">
+                  <div className="relative h-64 rounded-xl bg-black/40">
                     {/* center */}
                     <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/20 ring-2 ring-emerald-500/40" />
                     <span className="absolute left-1/2 top-[calc(50%+44px)] -translate-x-1/2 text-xs text-white/80">
@@ -634,7 +634,7 @@ export default function Page() {
                   </div>
 
                   {/* vendor table */}
-                  <div className="mt-4 overflow-auto rounded-lg border border-white/10">
+                  <div className="mt-4 overflow-auto rounded-xl border border-white/10">
                     <table className="w-full text-sm">
                       <thead className="bg-white/5 text-left text-white/60">
                         <tr>
@@ -678,7 +678,7 @@ export default function Page() {
                       ].map((a, i) => (
                         <div
                           key={i}
-                          className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-3 py-2"
+                          className="flex items-center justify-between rounded-xl border border-white/10 bg-black/40 px-3 py-2"
                         >
                           <div className="flex items-center gap-2">
                             {/* ---- Replaced `as any` with union type cast ---- */}
@@ -703,13 +703,13 @@ export default function Page() {
             {/* Row 3: Security Posture & Compliance */}
             <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="compliance">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Security & Compliance</h2>
+                <h2 className="text-xl font-semibold">Security & Compliance</h2>
                 <Badge color="red">Non-Compliant</Badge>
               </div>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-[220px_1fr]">
-                    <div className="relative h-44 rounded-lg border border-white/10 bg-black/40 p-2">
+                    <div className="relative h-44 rounded-xl border border-white/10 bg-black/40 p-2">
                       <Doughnut {...complianceGauge} />
                       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                         <div className="text-4xl font-bold">{complianceScore}</div>
@@ -729,7 +729,7 @@ export default function Page() {
                       ].map(([label, ok], i) => (
                         <div
                           key={i}
-                          className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm"
+                          className="flex items-center justify-between rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm"
                         >
                           <span className="text-white/80">{label as string}</span>
                           <span className={ok ? "text-emerald-400" : "text-red-400"}>
@@ -766,7 +766,7 @@ export default function Page() {
                       </div>
                     ))}
                   </div>
-                  <div className="mt-5 h-32 rounded-lg border border-white/10 bg-black/40 p-2">
+                  <div className="mt-5 h-32 rounded-xl border border-white/10 bg-black/40 p-2">
                     <Line {...complianceTrend} />
                   </div>
                 </div>
@@ -776,17 +776,17 @@ export default function Page() {
             {/* Row 4: Incident & Response Tracker */}
             <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="incidents">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Incident Tracker</h2>
+                <h2 className="text-xl font-semibold">Incident Tracker</h2>
                 <div className="flex items-center gap-2">
-                  <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
+                  <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
                     Export
                   </button>
-                  <button className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
+                  <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
                     Add incident
                   </button>
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
                 {/* table + trend */}
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="grid grid-cols-3 gap-3 text-center sm:grid-cols-6">
@@ -800,14 +800,14 @@ export default function Page() {
                     ].map(([k, v], i) => (
                       <div
                         key={i}
-                        className="rounded-lg border border-white/10 bg-black/40 p-2"
+                        className="rounded-xl border border-white/10 bg-black/40 p-2"
                       >
                         <div className="text-[11px] text-white/60">{k}</div>
                         <div className="text-xl font-semibold">{v}</div>
                       </div>
                     ))}
                   </div>
-                  <div className="mt-4 overflow-auto rounded-lg border border-white/10">
+                  <div className="mt-4 overflow-auto rounded-xl border border-white/10">
                     <table className="w-full text-sm">
                       <thead className="bg-white/5 text-left text-white/60">
                         <tr>
@@ -839,7 +839,7 @@ export default function Page() {
                       </tbody>
                     </table>
                   </div>
-                  <div className="mt-4 h-32 rounded-lg border border-white/10 bg-black/40 p-2">
+                  <div className="mt-4 h-32 rounded-xl border border-white/10 bg-black/40 p-2">
                     <Line {...incidentTrends} />
                   </div>
                 </div>
@@ -865,7 +865,7 @@ export default function Page() {
                       ].map((l, i) => (
                         <div
                           key={i}
-                          className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 px-3 py-2"
+                          className="flex items-center justify-between rounded-xl border border-white/10 bg-black/40 px-3 py-2"
                         >
                           <span className="text-sm text-white/80">{l[0]}</span>
                           <span className="text-xs text-white/50">{l[1]}</span>
