@@ -9,7 +9,7 @@
 		"generate": "drizzle-kit generate",
 		"amend": "drizzle-kit drop && drizzle-kit generate",
 		"studio": "drizzle-kit studio",
-		"migrate": "node scripts/execute-d1.mjs"
+		"migrate": "node scripts/migrate-execution.mjs"
 	},
 	"dependencies": {
 		"hono": "^4.9.6",
