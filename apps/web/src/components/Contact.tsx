@@ -153,12 +153,12 @@ export default function Contact() {
             <p className="mt-1 text-xs text-white/60">
               We offer SLAs, custom terms, and integrations.
             </p>
-            <a
+            <Link
               href="#pricing"
-              className="mt-3 inline-flex rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10"
+              className="mt-3 cursor-default inline-flex rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10"
             >
               View plans
-            </a>
+            </Link>
           </div>
         </motion.aside>
       </div>
