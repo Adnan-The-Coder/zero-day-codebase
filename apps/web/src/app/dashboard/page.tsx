@@ -72,7 +72,7 @@ const Icon = ({
   </svg>
 );
 
-/** ---------- EXPORT UTILS ---------- **/
+/** ---------- EXPORT UTILS (SECTION) ---------- **/
 function exportSectionToPDF(sectionId: string, filename: string) {
   const section = document.getElementById(sectionId);
   if (!section) return;
@@ -168,6 +168,137 @@ function exportSectionToPDF(sectionId: string, filename: string) {
     </html>
   `);
   printWindow.document.close();
+}
+
+/** ---------- EXPORT UTILS (DASHBOARD SUMMARY) ---------- **/
+function exportDashboardSummary(filename: string) {
+  const sectionIds = ["overview", "vendors", "compliance", "incidents"];
+  const sections = sectionIds
+    .map((id) => document.getElementById(id))
+    .filter(Boolean) as HTMLElement[];
+  if (!sections.length) return;
+
+  // Helper: convert canvases to images inside a cloned node
+  const cloneWithCanvasAsImages = (source: HTMLElement) => {
+    const cloned = source.cloneNode(true) as HTMLElement;
+    const origCanvases = source.querySelectorAll("canvas");
+    const cloneCanvases = cloned.querySelectorAll("canvas");
+    origCanvases.forEach((canvas, idx) => {
+      try {
+        const dataURL = (canvas as HTMLCanvasElement).toDataURL("image/png");
+        const img = document.createElement("img");
+        img.src = dataURL;
+        img.style.width = (canvas as HTMLCanvasElement).style.width || "100%";
+        img.style.height = (canvas as HTMLCanvasElement).style.height || "auto";
+        const c = cloneCanvases[idx];
+        if (c && c.parentNode) c.parentNode.replaceChild(img, c);
+      } catch {}
+    });
+    return cloned;
+  };
+
+  const printWindow = window.open("", "_blank", "width=1200,height=800");
+  if (!printWindow) return;
+
+  const styles = `
+    @page { size: A4; margin: 14mm; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; color: #0b0b0b; background: #fff; }
+    h1,h2,h3 { margin: 0 0 8px; }
+    .wrap { width: 100%; }
+    .header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px; }
+    .kpi { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin: 8px 0 14px; }
+    .kpi > div { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px; background:#fff; }
+    .muted { color:#6b7280; font-size:12px; }
+    .section { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; background: #fff; margin-top: 12px; }
+    img { max-width:100%; height:auto; }
+  `;
+
+  const now = new Date();
+  const printedAt = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+
+  // Build a printable document
+  const container = document.createElement("div");
+  container.className = "wrap";
+
+  const heading = document.createElement("div");
+  heading.className = "header";
+  heading.innerHTML = `
+    <div>
+      <h1 style="font-size:18px;font-weight:700;margin-bottom:4px;">Zero Console — Security Summary</h1>
+      <div class="muted">Exported ${printedAt}</div>
+    </div>
+    <div class="muted">Sections: ${sectionIds.join(" • ")}</div>
+  `;
+  container.appendChild(heading);
+
+  sections.forEach((s) => {
+    // Title line from section's h2 if present
+    const title = s.querySelector("h2")?.textContent ?? s.id;
+    const cloned = cloneWithCanvasAsImages(s);
+
+    // Remove tailwind dark classes for print
+    const stripDarkClasses = (node: HTMLElement) => {
+      node.className = (node.className || "")
+        .replace(/bg-.*?(?=\s|$)/g, "")
+        .replace(/text-white[^\s]*/g, "")
+        .replace(/border-white[^\s]*/g, "");
+      Array.from(node.children).forEach((child) =>
+        stripDarkClasses(child as HTMLElement)
+      );
+    };
+    stripDarkClasses(cloned);
+
+    const sectionWrap = document.createElement("div");
+    sectionWrap.className = "section";
+    sectionWrap.innerHTML = `<h2 style="font-size:15px;font-weight:700;margin-bottom:8px;">${title}</h2>`;
+    sectionWrap.appendChild(cloned);
+    container.appendChild(sectionWrap);
+  });
+
+  printWindow.document.open();
+  printWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${filename.replace(/\.pdf$/i, "")}</title>
+        <style>${styles}</style>
+      </head>
+      <body></body>
+    </html>
+  `);
+  printWindow.document.body.appendChild(container);
+
+  const waitForImages = () => {
+    const imgs = Array.from(printWindow.document.images || []);
+    if (imgs.length === 0) {
+      setTimeout(() => printWindow.print(), 50);
+      return;
+    }
+    let loaded = 0;
+    imgs.forEach((img) => {
+      if ((img as HTMLImageElement).complete) {
+        if (++loaded === imgs.length) printWindow.print();
+      } else {
+        img.addEventListener("load", () => {
+          if (++loaded === imgs.length) printWindow.print();
+        });
+        img.addEventListener("error", () => {
+          if (++loaded === imgs.length) printWindow.print();
+        });
+      }
+    });
+  };
+  // @ts-ignore
+  printWindow.document.fonts && printWindow.document.fonts.ready
+    ? // @ts-ignore
+      printWindow.document.fonts.ready.then(waitForImages)
+    : waitForImages();
+  printWindow.onafterprint = () => {
+    printWindow.close();
+  };
+  printWindow.document.title = filename.replace(/\.pdf$/i, "");
 }
 
 export default function Page() {
@@ -405,11 +536,30 @@ export default function Page() {
             <div className="relative">
               <button
                 onClick={() => setIsNotifOpen(!isNotifOpen)}
-                className="bg-[#141417] p-2 cursor-pointer rounded-2xl hover:bg-[#1a1a1f]"
+                className="bg-[#141417] p-2 cursor-default rounded-2xl hover:bg-[#1a1a1f]"
               >
                 <Bell size={20} />
               </button>
-
+              <button
+                onClick={() => exportDashboardSummary("Zero_Dashboard_Report.pdf")}
+                className="ml-2 inline-flex items-center gap-2 rounded-xl bg-white/5 p-2 text-xs md:text-sm hover:bg-white/10"
+                aria-label="Generate dashboard report"
+                title="Generate a printable report of all sections"
+              >
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M6 9V3h9l3 3v3" />
+                  <path d="M6 18h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2Z" />
+                  <path d="M14 18v3H6v-3" />
+                </svg>
+              </button>
               {isNotifOpen && (
                 <div className="absolute right-0 mt-2 w-60 rounded-xl bg-[#060707] shadow-xl border border-white/10 z-50">
                   <div className="p-3 text-white/90 font-semibold border-b border-white/10 text-sm">
@@ -591,8 +741,7 @@ export default function Page() {
                     { label: "Overview", icon: "M3 12h18M12 3v18", link: "#overview" },
                     {
                       label: "Phishing",
-                      icon:
-                        "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M9 12h6",
+                      icon: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M9 12h6",
                       link: "#phishing",
                     },
                     {
@@ -617,6 +766,18 @@ export default function Page() {
                       <span>{i.label}</span>
                     </Link>
                   ))}
+
+                  {/* Mobile: Generate Report quick action */}
+                  <button
+                    onClick={() => exportDashboardSummary("Zero_Dashboard_Report.pdf")}
+                    className="mt-2 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+                  >
+                    <Icon
+                      className="h-5 w-5"
+                      path="M6 9V3h9l3 3v3M6 18h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2z M14 18v3H6v-3"
+                    />
+                    Generate Report
+                  </button>
                 </div>
               </motion.aside>
             </motion.div>
