@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Chart as ChartJS,
@@ -29,6 +30,16 @@ ChartJS.register(
   Legend
 );
 
+// --- Types you can adjust to match your backend ---
+type SessionUser = {
+  id: string;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  imageUrl?: string | null;
+  // add fields your API returns…
+} | null;
+
 type BadgeColor = "red" | "amber" | "green" | "blue" | "neutral";
 
 const Badge = ({
@@ -36,7 +47,7 @@ const Badge = ({
   color = "neutral",
 }: {
   children: React.ReactNode;
-  color?: BadgeColor; // <- use union type
+  color?: BadgeColor;
 }) => {
   const map: Record<BadgeColor, string> = {
     red: "bg-red-500/15 text-red-400 ring-1 ring-red-500/30",
@@ -70,6 +81,7 @@ const Icon = ({
   </svg>
 );
 
+/** ---------- EXPORT UTILS ---------- **/
 function exportSectionToPDF(sectionId: string, filename: string) {
   const section = document.getElementById(sectionId);
   if (!section) return;
@@ -91,6 +103,7 @@ function exportSectionToPDF(sectionId: string, filename: string) {
         cloneCanvas.parentNode.replaceChild(img, cloneCanvas);
       }
     } catch {
+      // ignore
     }
   });
 
@@ -142,7 +155,6 @@ function exportSectionToPDF(sectionId: string, filename: string) {
           ${cloned.outerHTML}
         </div>
         <script>
-          // Wait for images/fonts, then print
           const waitForImages = () => {
             const imgs = Array.from(document.images || []);
             if (imgs.length === 0) { setTimeout(() => window.print(), 50); return; }
@@ -157,7 +169,6 @@ function exportSectionToPDF(sectionId: string, filename: string) {
           };
           document.fonts && document.fonts.ready ? document.fonts.ready.then(waitForImages) : waitForImages();
           window.onafterprint = () => { window.close(); };
-          // Set document title so browsers use it as the default PDF filename
           document.title = ${JSON.stringify(filename.replace(/\.pdf$/i, ""))};
         </script>
       </body>
@@ -166,11 +177,68 @@ function exportSectionToPDF(sectionId: string, filename: string) {
   printWindow.document.close();
 }
 
-export default function Page() {
-  const [open, setOpen] = useState(false);
+/** ---------- SIMPLE AUTH GUARD (no Clerk) ---------- **/
+async function fetchSessionUser(signal?: AbortSignal): Promise<SessionUser> {
+  // Replace with your own endpoint that returns { user: {...} } or null
+  const res = await fetch("/api/session", {
+    method: "GET",
+    credentials: "include",
+    headers: { "Accept": "application/json" },
+    signal,
+  });
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => null);
+  // Normalize to SessionUser
+  if (data && typeof data === "object" && ("user" in data)) {
+    return (data.user ?? null) as SessionUser;
+  }
+  return null;
+}
 
+export default function Page() {
+  const router = useRouter();
+
+  // Auth state (client-side)
+  const [authLoading, setAuthLoading] = useState(true);
+  const [me, setMe] = useState<SessionUser>(null);
+
+  // Guard: check session; redirect if missing
+  useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const user = await fetchSessionUser(controller.signal);
+        if (!user) {
+          router.replace("/login?redirect=/dashboard");
+          return;
+        }
+        setMe(user);
+      } finally {
+        setAuthLoading(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [router]);
+
+  // Loading state while verifying session
+  if (authLoading) {
+    return (
+      <div className="min-h-screen w-full bg-[#09080b] text-white grid place-items-center">
+        <div className="rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white/70">
+          Loading your dashboard…
+        </div>
+      </div>
+    );
+  }
+
+  // If we redirected already, render nothing
+  if (!me) return null;
+
+  /** ---------- DASHBOARD STATE / CHARTS ---------- **/
+  const [open, setOpen] = useState(false);
   const phishingScore = 87;
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+
   const phishingGauge = useMemo(
     () => ({
       data: {
@@ -196,7 +264,6 @@ export default function Page() {
     [phishingScore]
   );
 
-  // Flags bar
   const flagsBar = {
     data: {
       labels: ["Linguistic", "Urgency", "Imperson.", "URL"],
@@ -224,7 +291,6 @@ export default function Page() {
     },
   };
 
-  // Verdict distribution donut
   const verdictDonut = {
     data: {
       labels: ["Phishing", "Benign"],
@@ -244,7 +310,6 @@ export default function Page() {
     },
   };
 
-  // Vendor risk over time (line)
   const vendorRiskLine = {
     data: {
       labels: ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8"],
@@ -271,7 +336,6 @@ export default function Page() {
     },
   };
 
-  // Compliance gauge
   const complianceScore = 72;
   const complianceGauge = {
     data: {
@@ -295,7 +359,6 @@ export default function Page() {
     },
   };
 
-  // Compliance trend
   const complianceTrend = {
     data: {
       labels: Array.from({ length: 9 }, (_, i) => `Week ${i + 1}`),
@@ -322,7 +385,6 @@ export default function Page() {
     },
   };
 
-  // Incident severity donut
   const severityDonut = {
     data: {
       labels: ["High", "Medium", "Low"],
@@ -342,7 +404,6 @@ export default function Page() {
     },
   };
 
-  // Incident trends
   const incidentTrends = {
     data: {
       labels: ["02/03", "07/09", "08/15", "08/19", "08/24", "08/31", "09/17", "09/24"],
@@ -378,7 +439,7 @@ export default function Page() {
     },
   };
 
-  // ------- UI -------
+  /** ---------- UI ---------- **/
   return (
     <div className="min-h-screen w-full bg-[#09080b] text-white">
       <div className="sticky top-0 z-40 border-b border-white/10 bg-black/40 backdrop-blur supports-[backdrop-filter]:bg-black/80">
@@ -432,129 +493,128 @@ export default function Page() {
           </div>
         </div>
       </div>
+
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 xl:grid-cols-[240px_1fr]">
         <aside className="hidden xl:block border-r border-white/10">
           <nav className="sticky top-14 flex h-[calc(100vh-56px)] flex-col gap-2 p-3">
-          {[
-            {
-              label: "Overview",
-              link: "#overview",
-              icon: (
-                <svg
-                  className="h-5 w-5 text-white/60 flex-shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="3" y="3" width="7" height="7" rx="1.6" />
-                  <rect x="14" y="3" width="7" height="7" rx="1.6" />
-                  <rect x="3" y="14" width="7" height="7" rx="1.6" />
-                  <rect x="14" y="14" width="7" height="7" rx="1.6" />
-                </svg>
-              ),
-            },
-            {
-              label: "Phishing",
-              link: "#phishing",
-              icon: (
-                <svg
-                  className="h-5 w-5 text-white/60 flex-shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  {/* Envelope */}
-                  <rect x="3" y="7" width="14" height="10" rx="2" />
-                  <path d="M3 9l7 5 7-5" />
-                  {/* Alert badge */}
-                  <circle cx="19" cy="7" r="3" />
-                  <path d="M19 5.5v2.2" />
-                  <path d="M19 9.7h.01" />
-                </svg>
-              ),
-            },
-            {
-              label: "Vendors",
-              link: "#vendors",
-              icon: (
-                <svg
-                  className="h-5 w-5 text-white/60 flex-shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M21 16V8l-9-5-9 5v8l9 5 9-5z" />
-                  <path d="M3 8l9 5 9-5" />
-                  <path d="M12 13v8" />
-                </svg>
-              ),
-            },
-            {
-              label: "Compliance",
-              link: "#compliance",
-              icon: (
-                <svg
-                  className="h-5 w-5 text-white/60 flex-shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M12 3l7 4v5c0 5-3.5 9-7 9s-7-4-7-9V7l7-4z" />
-                  <path d="M9 12l2 2 4-4" />
-                </svg>
-              ),
-            },
-            {
-              label: "Incidents",
-              link: "#incidents",
-              icon: (
-                <svg
-                  className="h-5 w-5 text-white/60 flex-shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M12 3l9 16H3l9-16z" />
-                  <path d="M12 9v5" />
-                  <path d="M12 17h.01" />
-                </svg>
-              ),
-            },
-          ].map((i, idx) => (
-            <Link
-              key={idx}
-              href={i.link}
-              className="group flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 ring-1 ring-inset ring-white/10 hover:bg-white/5"
-            >
-              {i.icon}
-              <span>{i.label}</span>
-            </Link>
-          ))}
-          <div className="mt-auto text-xs text-white/40">
-            © {new Date().getFullYear()} Zero • Built for defenders
-          </div>
-        </nav>
+            {[
+              {
+                label: "Overview",
+                link: "#overview",
+                icon: (
+                  <svg
+                    className="h-5 w-5 text-white/60 flex-shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="3" width="7" height="7" rx="1.6" />
+                    <rect x="14" y="3" width="7" height="7" rx="1.6" />
+                    <rect x="3" y="14" width="7" height="7" rx="1.6" />
+                    <rect x="14" y="14" width="7" height="7" rx="1.6" />
+                  </svg>
+                ),
+              },
+              {
+                label: "Phishing",
+                link: "#phishing",
+                icon: (
+                  <svg
+                    className="h-5 w-5 text-white/60 flex-shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="7" width="14" height="10" rx="2" />
+                    <path d="M3 9l7 5 7-5" />
+                    <circle cx="19" cy="7" r="3" />
+                    <path d="M19 5.5v2.2" />
+                    <path d="M19 9.7h.01" />
+                  </svg>
+                ),
+              },
+              {
+                label: "Vendors",
+                link: "#vendors",
+                icon: (
+                  <svg
+                    className="h-5 w-5 text-white/60 flex-shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 16V8l-9-5-9 5v8l9 5 9-5z" />
+                    <path d="M3 8l9 5 9-5" />
+                    <path d="M12 13v8" />
+                  </svg>
+                ),
+              },
+              {
+                label: "Compliance",
+                link: "#compliance",
+                icon: (
+                  <svg
+                    className="h-5 w-5 text-white/60 flex-shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 3l7 4v5c0 5-3.5 9-7 9s-7-4-7-9V7l7-4z" />
+                    <path d="M9 12l2 2 4-4" />
+                  </svg>
+                ),
+              },
+              {
+                label: "Incidents",
+                link: "#incidents",
+                icon: (
+                  <svg
+                    className="h-5 w-5 text-white/60 flex-shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 3l9 16H3l9-16z" />
+                    <path d="M12 9v5" />
+                    <path d="M12 17h.01" />
+                  </svg>
+                ),
+              },
+            ].map((i, idx) => (
+              <Link
+                key={idx}
+                href={i.link}
+                className="group flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 ring-1 ring-inset ring-white/10 hover:bg-white/5"
+              >
+                {i.icon}
+                <span>{i.label}</span>
+              </Link>
+            ))}
+            <div className="mt-auto text-xs text-white/40">
+              © {new Date().getFullYear()} Zero • Built for defenders
+            </div>
+          </nav>
         </aside>
+
         <AnimatePresence>
           {open && (
             <motion.div
@@ -593,33 +653,11 @@ export default function Page() {
                 </div>
                 <div className="flex flex-col gap-2">
                   {[
-                    {
-                      label: "Overview",
-                      icon: "M3 12h18M12 3v18",
-                      link: "#overview",
-                    },
-                    {
-                      label: "Phishing",
-                      icon:
-                        "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M9 12h6",
-                      link: "#phishing",
-                    },
-                    {
-                      label: "Vendors",
-                      icon: "M3 7h18M3 12h18M3 17h18",
-                      link: "#vendors",
-                    },
-                    {
-                      label: "Compliance",
-                      icon: "M5 13l4 4L19 7",
-                      link: "#compliance",
-                    },
-                    {
-                      label: "Incidents",
-                      icon:
-                        "M12 9v4m0 4h.01M5 12a7 7 0 1 0 14 0 7 7 0 0 0-14 0z",
-                      link: "#incidents",
-                    },
+                    { label: "Overview", icon: "M3 12h18M12 3v18", link: "#overview" },
+                    { label: "Phishing", icon: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M9 12h6", link: "#phishing" },
+                    { label: "Vendors", icon: "M3 7h18M3 12h18M3 17h18", link: "#vendors" },
+                    { label: "Compliance", icon: "M5 13l4 4L19 7", link: "#compliance" },
+                    { label: "Incidents", icon: "M12 9v4m0 4h.01M5 12a7 7 0 1 0 14 0 7 7 0 0 0-14 0z", link: "#incidents" },
                   ].map((i, idx) => (
                     <Link
                       key={idx}
@@ -643,7 +681,10 @@ export default function Page() {
         >
           <div className="grid grid-cols-1 gap-6">
             {/* Row 1: AI-Driven Phishing Detection */}
-            <section className="rounded-2xl border border-white/10 bg-black/80 p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)]" id="overview">
+            <section
+              className="rounded-2xl border border-white/10 bg-black/80 p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)]"
+              id="overview"
+            >
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">AI Phishing Detection</h2>
                 <Badge color="green">Operational</Badge>
@@ -702,9 +743,7 @@ export default function Page() {
 
                 {/* Right: URL table */}
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                  <p className="mb-3 text-sm font-semibold text-white/80">
-                    Flagged URLs
-                  </p>
+                  <p className="mb-3 text-sm font-semibold text-white/80">Flagged URLs</p>
                   <div className="overflow-auto">
                     <table className="w-full text-sm">
                       <thead className="text-left text-white/60">
@@ -716,30 +755,14 @@ export default function Page() {
                       </thead>
                       <tbody className="divide-y divide-white/10">
                         {[
-                          {
-                            url: "hxtp://exarnple.com/login",
-                            issue: "Impersonation",
-                            risk: "High",
-                            color: "red",
-                          },
-                          {
-                            url: "hxxps://secure.example.net/",
-                            issue: "Deceptive Link",
-                            risk: "Medium",
-                            color: "amber",
-                          },
-                          {
-                            url: "hxxp://billing.exarnple.co",
-                            issue: "Typosquatting",
-                            risk: "High",
-                            color: "red",
-                          },
+                          { url: "hxtp://exarnple.com/login", issue: "Impersonation", risk: "High", color: "red" },
+                          { url: "hxxps://secure.example.net/", issue: "Deceptive Link", risk: "Medium", color: "amber" },
+                          { url: "hxxp://billing.exarnple.co", issue: "Typosquatting", risk: "High", color: "red" },
                         ].map((r, i) => (
                           <tr key={i} className="hover:bg-white/[0.03]">
                             <td className="py-2 pr-3 text-white/80">{r.url}</td>
                             <td className="py-2 pr-3 text-white/70">{r.issue}</td>
                             <td className="py-2">
-                              {/* ---- Replaced `as any` with union type cast ---- */}
                               <Badge color={r.color as BadgeColor}>{r.risk}</Badge>
                             </td>
                           </tr>
@@ -775,30 +798,10 @@ export default function Page() {
                     </span>
                     {/* nodes */}
                     {[
-                      {
-                        x: "20%",
-                        y: "18%",
-                        label: "Acme Corp",
-                        color: "bg-red-500/20 ring-red-500/40",
-                      },
-                      {
-                        x: "78%",
-                        y: "26%",
-                        label: "Tech Innovations",
-                        color: "bg-amber-500/20 ring-amber-500/40",
-                      },
-                      {
-                        x: "22%",
-                        y: "74%",
-                        label: "SecureSoft",
-                        color: "bg-sky-500/20 ring-sky-500/40",
-                      },
-                      {
-                        x: "82%",
-                        y: "68%",
-                        label: "Global Insights",
-                        color: "bg-emerald-500/20 ring-emerald-500/40",
-                      },
+                      { x: "20%", y: "18%", label: "Acme Corp", color: "bg-red-500/20 ring-red-500/40" },
+                      { x: "78%", y: "26%", label: "Tech Innovations", color: "bg-amber-500/20 ring-amber-500/40" },
+                      { x: "22%", y: "74%", label: "SecureSoft", color: "bg-sky-500/20 ring-sky-500/40" },
+                      { x: "82%", y: "68%", label: "Global Insights", color: "bg-emerald-500/20 ring-emerald-500/40" },
                     ].map((n, i) => (
                       <div key={i} className="absolute" style={{ left: n.x, top: n.y }}>
                         <div className={`h-10 w-10 rounded-full ring-2 ${n.color}`} />
@@ -859,7 +862,6 @@ export default function Page() {
                           className="flex items-center justify-between rounded-xl border border-white/10 bg-black/40 px-3 py-2"
                         >
                           <div className="flex items-center gap-2">
-                            {/* ---- Replaced `as any` with union type cast ---- */}
                             <Badge color={a.color as BadgeColor}>{a.level}</Badge>
                             <span className="text-sm text-white/80">{a.label}</span>
                           </div>
@@ -885,15 +887,13 @@ export default function Page() {
                 <Badge color="red">Non-Compliant</Badge>
               </div>
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-[220px_1fr]">
                     <div className="relative h-44 rounded-xl border border-white/10 bg-black/40 p-2">
                       <Doughnut {...complianceGauge} />
                       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                         <div className="text-4xl font-bold">{complianceScore}</div>
-                        <div className="text-xs text-white/80">
-                          OVERALL SECURITY COMPLIANCE
-                        </div>
+                        <div className="text-xs text-white/80">OVERALL SECURITY COMPLIANCE</div>
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -918,7 +918,7 @@ export default function Page() {
                     </div>
                   </div>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                   <p className="mb-3 text-sm font-semibold">Compliance Breakdown</p>
                   <div className="space-y-3">
                     {[
@@ -966,7 +966,7 @@ export default function Page() {
               </div>
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
                 {/* table + trend */}
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="grid grid-cols-3 gap-3 text-center sm:grid-cols-6">
                     {[
                       ["Total Incidents", "128"],
@@ -976,10 +976,7 @@ export default function Page() {
                       ["Medium", "55"],
                       ["Low", "35"],
                     ].map(([k, v], i) => (
-                      <div
-                        key={i}
-                        className="rounded-xl border border-white/10 bg-black/40 p-2"
-                      >
+                      <div key={i} className="rounded-xl border border-white/10 bg-black/40 p-2">
                         <div className="text-[11px] text-white/60">{k}</div>
                         <div className="text-xl font-semibold">{v}</div>
                       </div>
@@ -1024,7 +1021,7 @@ export default function Page() {
 
                 {/* right column */}
                 <div className="grid grid-cols-1 gap-4">
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                     <p className="mb-2 text-sm font-semibold">Incident Severity</p>
                     <div className="relative h-40">
                       <Doughnut {...severityDonut} />
@@ -1033,7 +1030,7 @@ export default function Page() {
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                     <p className="mb-2 text-sm font-semibold">Latest Incident Updates</p>
                     <div className="space-y-2">
                       {[
