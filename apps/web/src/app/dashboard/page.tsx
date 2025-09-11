@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Chart as ChartJS,
@@ -30,16 +29,6 @@ ChartJS.register(
   Legend
 );
 
-// --- Types you can adjust to match your backend ---
-type SessionUser = {
-  id: string;
-  email?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  imageUrl?: string | null;
-  // add fields your API returns…
-} | null;
-
 type BadgeColor = "red" | "amber" | "green" | "blue" | "neutral";
 
 const Badge = ({
@@ -57,7 +46,9 @@ const Badge = ({
     neutral: "bg-white/5 text-white/70 ring-1 ring-white/10",
   };
   return (
-    <span className={`hidden md:inline px-1 py-0.25 rounded-md text-[10px] font-medium cursor-pointer mt-1 ${map[color]}`}>
+    <span
+      className={`hidden md:inline px-1 py-0.25 rounded-md text-[10px] font-medium cursor-pointer mt-1 ${map[color]}`}
+    >
       {children}
     </span>
   );
@@ -136,7 +127,9 @@ function exportSectionToPDF(sectionId: string, filename: string) {
       .replace(/bg-.*?(?=\s|$)/g, "")
       .replace(/text-white[^\s]*/g, "")
       .replace(/border-white[^\s]*/g, "");
-    Array.from(node.children).forEach((child) => stripDarkClasses(child as HTMLElement));
+    Array.from(node.children).forEach((child) =>
+      stripDarkClasses(child as HTMLElement)
+    );
   };
   stripDarkClasses(cloned);
 
@@ -177,63 +170,7 @@ function exportSectionToPDF(sectionId: string, filename: string) {
   printWindow.document.close();
 }
 
-/** ---------- SIMPLE AUTH GUARD (no Clerk) ---------- **/
-async function fetchSessionUser(signal?: AbortSignal): Promise<SessionUser> {
-  // Replace with your own endpoint that returns { user: {...} } or null
-  const res = await fetch("/api/session", {
-    method: "GET",
-    credentials: "include",
-    headers: { "Accept": "application/json" },
-    signal,
-  });
-  if (!res.ok) return null;
-  const data = await res.json().catch(() => null);
-  // Normalize to SessionUser
-  if (data && typeof data === "object" && ("user" in data)) {
-    return (data.user ?? null) as SessionUser;
-  }
-  return null;
-}
-
 export default function Page() {
-  const router = useRouter();
-
-  // Auth state (client-side)
-  const [authLoading, setAuthLoading] = useState(true);
-  const [me, setMe] = useState<SessionUser>(null);
-
-  // Guard: check session; redirect if missing
-  useEffect(() => {
-    const controller = new AbortController();
-    (async () => {
-      try {
-        const user = await fetchSessionUser(controller.signal);
-        if (!user) {
-          router.replace("/login?redirect=/dashboard");
-          return;
-        }
-        setMe(user);
-      } finally {
-        setAuthLoading(false);
-      }
-    })();
-    return () => controller.abort();
-  }, [router]);
-
-  // Loading state while verifying session
-  if (authLoading) {
-    return (
-      <div className="min-h-screen w-full bg-[#09080b] text-white grid place-items-center">
-        <div className="rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white/70">
-          Loading your dashboard…
-        </div>
-      </div>
-    );
-  }
-
-  // If we redirected already, render nothing
-  if (!me) return null;
-
   /** ---------- DASHBOARD STATE / CHARTS ---------- **/
   const [open, setOpen] = useState(false);
   const phishingScore = 87;
@@ -553,7 +490,6 @@ export default function Page() {
                     strokeWidth="1.6"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    aria-hidden="true"
                   >
                     <path d="M21 16V8l-9-5-9 5v8l9 5 9-5z" />
                     <path d="M3 8l9 5 9-5" />
@@ -573,7 +509,6 @@ export default function Page() {
                     strokeWidth="1.6"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    aria-hidden="true"
                   >
                     <path d="M12 3l7 4v5c0 5-3.5 9-7 9s-7-4-7-9V7l7-4z" />
                     <path d="M9 12l2 2 4-4" />
@@ -654,10 +589,24 @@ export default function Page() {
                 <div className="flex flex-col gap-2">
                   {[
                     { label: "Overview", icon: "M3 12h18M12 3v18", link: "#overview" },
-                    { label: "Phishing", icon: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M9 12h6", link: "#phishing" },
-                    { label: "Vendors", icon: "M3 7h18M3 12h18M3 17h18", link: "#vendors" },
+                    {
+                      label: "Phishing",
+                      icon:
+                        "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M9 12h6",
+                      link: "#phishing",
+                    },
+                    {
+                      label: "Vendors",
+                      icon: "M3 7h18M3 12h18M3 17h18",
+                      link: "#vendors",
+                    },
                     { label: "Compliance", icon: "M5 13l4 4L19 7", link: "#compliance" },
-                    { label: "Incidents", icon: "M12 9v4m0 4h.01M5 12a7 7 0 1 0 14 0 7 7 0 0 0-14 0z", link: "#incidents" },
+                    {
+                      label: "Incidents",
+                      icon:
+                        "M12 9v4m0 4h.01M5 12a7 7 0 1 0 14 0 7 7 0 0 0-14 0z",
+                      link: "#incidents",
+                    },
                   ].map((i, idx) => (
                     <Link
                       key={idx}
@@ -755,9 +704,24 @@ export default function Page() {
                       </thead>
                       <tbody className="divide-y divide-white/10">
                         {[
-                          { url: "hxtp://exarnple.com/login", issue: "Impersonation", risk: "High", color: "red" },
-                          { url: "hxxps://secure.example.net/", issue: "Deceptive Link", risk: "Medium", color: "amber" },
-                          { url: "hxxp://billing.exarnple.co", issue: "Typosquatting", risk: "High", color: "red" },
+                          {
+                            url: "hxtp://exarnple.com/login",
+                            issue: "Impersonation",
+                            risk: "High",
+                            color: "red",
+                          },
+                          {
+                            url: "hxxps://secure.example.net/",
+                            issue: "Deceptive Link",
+                            risk: "Medium",
+                            color: "amber",
+                          },
+                          {
+                            url: "hxxp://billing.exarnple.co",
+                            issue: "Typosquatting",
+                            risk: "High",
+                            color: "red",
+                          },
                         ].map((r, i) => (
                           <tr key={i} className="hover:bg-white/[0.03]">
                             <td className="py-2 pr-3 text-white/80">{r.url}</td>
@@ -775,13 +739,18 @@ export default function Page() {
             </section>
 
             {/* Row 2: Supply Chain Vulnerability Mapping */}
-            <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="vendors">
+            <section
+              className="rounded-2xl border border-white/10 bg-black/80 p-4"
+              id="vendors"
+            >
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Supply Chain Mapping</h2>
                 <div className="flex items-center gap-2">
                   <button
                     className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
-                    onClick={() => exportSectionToPDF("vendors", "Supply_Chain_Mapping.pdf")}
+                    onClick={() =>
+                      exportSectionToPDF("vendors", "Supply_Chain_Mapping.pdf")
+                    }
                   >
                     Export
                   </button>
@@ -798,10 +767,30 @@ export default function Page() {
                     </span>
                     {/* nodes */}
                     {[
-                      { x: "20%", y: "18%", label: "Acme Corp", color: "bg-red-500/20 ring-red-500/40" },
-                      { x: "78%", y: "26%", label: "Tech Innovations", color: "bg-amber-500/20 ring-amber-500/40" },
-                      { x: "22%", y: "74%", label: "SecureSoft", color: "bg-sky-500/20 ring-sky-500/40" },
-                      { x: "82%", y: "68%", label: "Global Insights", color: "bg-emerald-500/20 ring-emerald-500/40" },
+                      {
+                        x: "20%",
+                        y: "18%",
+                        label: "Acme Corp",
+                        color: "bg-red-500/20 ring-red-500/40",
+                      },
+                      {
+                        x: "78%",
+                        y: "26%",
+                        label: "Tech Innovations",
+                        color: "bg-amber-500/20 ring-amber-500/40",
+                      },
+                      {
+                        x: "22%",
+                        y: "74%",
+                        label: "SecureSoft",
+                        color: "bg-sky-500/20 ring-sky-500/40",
+                      },
+                      {
+                        x: "82%",
+                        y: "68%",
+                        label: "Global Insights",
+                        color: "bg-emerald-500/20 ring-emerald-500/40",
+                      },
                     ].map((n, i) => (
                       <div key={i} className="absolute" style={{ left: n.x, top: n.y }}>
                         <div className={`h-10 w-10 rounded-full ring-2 ${n.color}`} />
@@ -881,7 +870,10 @@ export default function Page() {
             </section>
 
             {/* Row 3: Security Posture & Compliance */}
-            <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="compliance">
+            <section
+              className="rounded-2xl border border-white/10 bg-black/80 p-4"
+              id="compliance"
+            >
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Security & Compliance</h2>
                 <Badge color="red">Non-Compliant</Badge>
@@ -893,7 +885,9 @@ export default function Page() {
                       <Doughnut {...complianceGauge} />
                       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                         <div className="text-4xl font-bold">{complianceScore}</div>
-                        <div className="text-xs text-white/80">OVERALL SECURITY COMPLIANCE</div>
+                        <div className="text-xs text-white/80">
+                          OVERALL SECURITY COMPLIANCE
+                        </div>
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -952,13 +946,18 @@ export default function Page() {
             </section>
 
             {/* Row 4: Incident & Response Tracker */}
-            <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="incidents">
+            <section
+              className="rounded-2xl border border-white/10 bg-black/80 p-4"
+              id="incidents"
+            >
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Incident Tracker</h2>
                 <div className="flex items-center gap-2">
                   <button
                     className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
-                    onClick={() => exportSectionToPDF("incidents", "Incident_Tracker.pdf")}
+                    onClick={() =>
+                      exportSectionToPDF("incidents", "Incident_Tracker.pdf")
+                    }
                   >
                     Export
                   </button>
@@ -976,7 +975,10 @@ export default function Page() {
                       ["Medium", "55"],
                       ["Low", "35"],
                     ].map(([k, v], i) => (
-                      <div key={i} className="rounded-xl border border-white/10 bg-black/40 p-2">
+                      <div
+                        key={i}
+                        className="rounded-xl border border-white/10 bg-black/40 p-2"
+                      >
                         <div className="text-[11px] text-white/60">{k}</div>
                         <div className="text-xl font-semibold">{v}</div>
                       </div>
