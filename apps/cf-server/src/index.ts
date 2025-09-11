@@ -3,6 +3,8 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
 import { requestId } from "hono/request-id";
+import contactRoutes from "./routes/contact";
+
 
 interface CloudflareBindings {
   ENVIRONMENT?: string;
@@ -220,5 +222,6 @@ app.get("/status", (c) => {
   });
 });
 
+app.route("/contact", contactRoutes);
 
 export default app;

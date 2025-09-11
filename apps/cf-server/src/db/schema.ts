@@ -16,3 +16,14 @@ export const contactUs = sqliteTable("contactus", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const userProfile = sqliteTable("user_profile", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email").notNull(),
+  name: text("name").notNull(),
+  role: text("role").notNull(),
+  phone: text("phone").notNull(),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+}); 
