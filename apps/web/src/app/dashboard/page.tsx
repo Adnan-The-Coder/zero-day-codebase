@@ -46,7 +46,7 @@ const Badge = ({
     neutral: "bg-white/5 text-white/70 ring-1 ring-white/10",
   };
   return (
-    <span className={`hidden md:inline px-2 py-0.5 rounded-md text-xs font-medium ${map[color]}`}>
+    <span className={`hidden md:inline px-1 py-0.25 rounded-md text-[10px] font-medium cursor-pointer mt-1 ${map[color]}`}>
       {children}
     </span>
   );
@@ -70,11 +70,105 @@ const Icon = ({
   </svg>
 );
 
+function exportSectionToPDF(sectionId: string, filename: string) {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+
+  const cloned = section.cloneNode(true) as HTMLElement;
+
+  const origCanvases = section.querySelectorAll("canvas");
+  const cloneCanvases = cloned.querySelectorAll("canvas");
+
+  origCanvases.forEach((canvas, idx) => {
+    try {
+      const dataURL = (canvas as HTMLCanvasElement).toDataURL("image/png");
+      const img = document.createElement("img");
+      img.src = dataURL;
+      img.style.width = (canvas as HTMLCanvasElement).style.width || "100%";
+      img.style.height = (canvas as HTMLCanvasElement).style.height || "auto";
+      const cloneCanvas = cloneCanvases[idx];
+      if (cloneCanvas && cloneCanvas.parentNode) {
+        cloneCanvas.parentNode.replaceChild(img, cloneCanvas);
+      }
+    } catch {
+    }
+  });
+
+  const printWindow = window.open("", "_blank", "width=1024,height=768");
+  if (!printWindow) return;
+
+  const styles = `
+    @page { size: A4; margin: 16mm; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; color: #0b0b0b; background: #fff; }
+    h1,h2,h3 { margin: 0 0 8px; }
+    .print-wrap { width: 100%; }
+    .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; background: #fff; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: #f3f4f6; }
+    th, td { border-bottom: 1px solid #e5e7eb; padding: 8px; text-align: left; font-size: 12px; }
+    .muted { color: #6b7280; font-size: 12px; }
+    img { max-width: 100%; height: auto; }
+    .grid { display: grid; gap: 12px; }
+    .mt-12 { margin-top: 12px; }
+    .title { font-weight: 700; font-size: 18px; margin-bottom: 8px; }
+    .subtitle { font-weight: 600; font-size: 14px; margin: 12px 0 6px; }
+  `;
+
+  const now = new Date();
+  const printedAt = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+
+  const stripDarkClasses = (node: HTMLElement) => {
+    node.className = node.className
+      .replace(/bg-.*?(?=\s|$)/g, "")
+      .replace(/text-white[^\s]*/g, "")
+      .replace(/border-white[^\s]*/g, "");
+    Array.from(node.children).forEach((child) => stripDarkClasses(child as HTMLElement));
+  };
+  stripDarkClasses(cloned);
+
+  printWindow.document.open();
+  printWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${filename.replace(/\.pdf$/i, "")}</title>
+        <style>${styles}</style>
+      </head>
+      <body>
+        <div class="print-wrap">
+          <div class="muted">Exported: ${printedAt}</div>
+          ${cloned.outerHTML}
+        </div>
+        <script>
+          // Wait for images/fonts, then print
+          const waitForImages = () => {
+            const imgs = Array.from(document.images || []);
+            if (imgs.length === 0) { setTimeout(() => window.print(), 50); return; }
+            let loaded = 0;
+            imgs.forEach(img => {
+              if (img.complete) { if (++loaded === imgs.length) window.print(); }
+              else {
+                img.addEventListener('load', () => { if (++loaded === imgs.length) window.print(); });
+                img.addEventListener('error', () => { if (++loaded === imgs.length) window.print(); });
+              }
+            });
+          };
+          document.fonts && document.fonts.ready ? document.fonts.ready.then(waitForImages) : waitForImages();
+          window.onafterprint = () => { window.close(); };
+          // Set document title so browsers use it as the default PDF filename
+          document.title = ${JSON.stringify(filename.replace(/\.pdf$/i, ""))};
+        </script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+
 export default function Page() {
   const [open, setOpen] = useState(false);
 
-  // ------- Charts (all inline so this stays one file) -------
-  // Gauge-like doughnut (Phishing)
   const phishingScore = 87;
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const phishingGauge = useMemo(
@@ -341,42 +435,126 @@ export default function Page() {
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 xl:grid-cols-[240px_1fr]">
         <aside className="hidden xl:block border-r border-white/10">
           <nav className="sticky top-14 flex h-[calc(100vh-56px)] flex-col gap-2 p-3">
-            {[
-              { label: "Overview", icon: "M3 12h18M12 3v18", link: "#overview" },
-              {
-                label: "Phishing",
-                icon: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M9 12h6",
-                link: "#phishing",
-              },
-              {
-                label: "Vendors",
-                icon: "M3 7h18M3 12h18M3 17h18",
-                link: "#vendors",
-              },
-              { label: "Compliance", icon: "M5 13l4 4L19 7", link: "#compliance" },
-              {
-                label: "Incidents",
-                icon:
-                  "M12 9v4m0 4h.01M5 12a7 7 0 1 0 14 0 7 7 0 0 0-14 0z",
-                link: "#incidents",
-              },
-            ].map((i, idx) => (
-              <Link
-                key={idx}
-                href={i.link}
-                className="group flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 ring-1 ring-inset ring-white/10 hover:bg-white/5"
-              >
-                <Icon className="h-5 w-5 text-white/60" path={i.icon} />
-                <span>{i.label}</span>
-              </Link>
-            ))}
-            <div className="mt-auto text-xs text-white/40">
-              © {new Date().getFullYear()} Zero • Built for defenders
-            </div>
-          </nav>
+          {[
+            {
+              label: "Overview",
+              link: "#overview",
+              icon: (
+                <svg
+                  className="h-5 w-5 text-white/60 flex-shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="3" width="7" height="7" rx="1.6" />
+                  <rect x="14" y="3" width="7" height="7" rx="1.6" />
+                  <rect x="3" y="14" width="7" height="7" rx="1.6" />
+                  <rect x="14" y="14" width="7" height="7" rx="1.6" />
+                </svg>
+              ),
+            },
+            {
+              label: "Phishing",
+              link: "#phishing",
+              icon: (
+                <svg
+                  className="h-5 w-5 text-white/60 flex-shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  {/* Envelope */}
+                  <rect x="3" y="7" width="14" height="10" rx="2" />
+                  <path d="M3 9l7 5 7-5" />
+                  {/* Alert badge */}
+                  <circle cx="19" cy="7" r="3" />
+                  <path d="M19 5.5v2.2" />
+                  <path d="M19 9.7h.01" />
+                </svg>
+              ),
+            },
+            {
+              label: "Vendors",
+              link: "#vendors",
+              icon: (
+                <svg
+                  className="h-5 w-5 text-white/60 flex-shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 16V8l-9-5-9 5v8l9 5 9-5z" />
+                  <path d="M3 8l9 5 9-5" />
+                  <path d="M12 13v8" />
+                </svg>
+              ),
+            },
+            {
+              label: "Compliance",
+              link: "#compliance",
+              icon: (
+                <svg
+                  className="h-5 w-5 text-white/60 flex-shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 3l7 4v5c0 5-3.5 9-7 9s-7-4-7-9V7l7-4z" />
+                  <path d="M9 12l2 2 4-4" />
+                </svg>
+              ),
+            },
+            {
+              label: "Incidents",
+              link: "#incidents",
+              icon: (
+                <svg
+                  className="h-5 w-5 text-white/60 flex-shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 3l9 16H3l9-16z" />
+                  <path d="M12 9v5" />
+                  <path d="M12 17h.01" />
+                </svg>
+              ),
+            },
+          ].map((i, idx) => (
+            <Link
+              key={idx}
+              href={i.link}
+              className="group flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 ring-1 ring-inset ring-white/10 hover:bg-white/5"
+            >
+              {i.icon}
+              <span>{i.label}</span>
+            </Link>
+          ))}
+          <div className="mt-auto text-xs text-white/40">
+            © {new Date().getFullYear()} Zero • Built for defenders
+          </div>
+        </nav>
         </aside>
-
-        {/* Mobile sidebar (overlay) */}
         <AnimatePresence>
           {open && (
             <motion.div
@@ -465,7 +643,7 @@ export default function Page() {
         >
           <div className="grid grid-cols-1 gap-6">
             {/* Row 1: AI-Driven Phishing Detection */}
-            <section className="rounded-2xl border border-white/10 bg-black/80 p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)]">
+            <section className="rounded-2xl border border-white/10 bg-black/80 p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)]" id="overview">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">AI Phishing Detection</h2>
                 <Badge color="green">Operational</Badge>
@@ -578,11 +756,11 @@ export default function Page() {
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Supply Chain Mapping</h2>
                 <div className="flex items-center gap-2">
-                  <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
+                  <button
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+                    onClick={() => exportSectionToPDF("vendors", "Supply_Chain_Mapping.pdf")}
+                  >
                     Export
-                  </button>
-                  <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
-                    View
                   </button>
                 </div>
               </div>
@@ -778,11 +956,11 @@ export default function Page() {
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Incident Tracker</h2>
                 <div className="flex items-center gap-2">
-                  <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
+                  <button
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+                    onClick={() => exportSectionToPDF("incidents", "Incident_Tracker.pdf")}
+                  >
                     Export
-                  </button>
-                  <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10">
-                    Add incident
                   </button>
                 </div>
               </div>
