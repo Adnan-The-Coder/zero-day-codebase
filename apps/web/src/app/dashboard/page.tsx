@@ -638,7 +638,7 @@ export default function Page() {
 
         {/* Main */}
         <main
-          className="min-h-[calc(100vh-56px)] bg-[#09080b] to-transparent p-2 xl:p-3"
+          className="min-h-[calc(100vh-56px)] bg-[#09080b] to-transparent p-1 xl:p-3"
           id="phishing"
         >
           <div className="grid grid-cols-1 gap-6">
