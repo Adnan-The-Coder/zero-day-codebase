@@ -190,6 +190,7 @@ zero-day-codebase/
 ├── .github/                 # Contains Tests, CI/CD pipelines using github action workflows
 ├── apps/                    # Application packages
 │   ├── web/                 # Main web application
+│   ├── cf-server/           # Cloudflare workers deployed, Backend server for Platform analytics, user related CRUD operations and APIs enabled features
 │   ├── python backend/      # Python Backend (coming soon...)
 ├── packages/                # Shared packages
 ├── nx.json/                 # Configurationa file of nx 
