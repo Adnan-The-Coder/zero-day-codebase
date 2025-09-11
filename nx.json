@@ -28,6 +28,7 @@
     "libsDir": "libs"
   },
   "projects": {
-    "web": "apps/web"
+    "web": "apps/web",
+    "cf-server": "apps/cf-server"
   }
 }

@@ -1,5 +1,6 @@
 fastapi[all]
 uvicorn[standard]
-tensorflow[all]
+torch
 numpy
 pydantic
+    
