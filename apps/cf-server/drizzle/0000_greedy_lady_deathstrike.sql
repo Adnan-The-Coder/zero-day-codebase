@@ -1,3 +1,12 @@
+CREATE TABLE `contactus` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`name` text NOT NULL,
+	`email` text NOT NULL,
+	`subject` text NOT NULL,
+	`description` text NOT NULL,
+	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `userProfiles` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`uuid` text NOT NULL,
@@ -17,5 +26,4 @@ CREATE TABLE `userProfiles` (
 	`reviews` text
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `userProfiles_uuid_unique` ON `userProfiles` (`uuid`);--> statement-breakpoint
-DROP TABLE `user_profile`;
+CREATE UNIQUE INDEX `userProfiles_uuid_unique` ON `userProfiles` (`uuid`);

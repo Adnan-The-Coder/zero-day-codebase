@@ -46,3 +46,27 @@ export const userProfiles = sqliteTable("userProfiles", {
 
   reviews: text("reviews"), // Store as JSON string
 });
+
+
+export const phishingMails = sqliteTable("phishingMails", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+
+  // Email text that the user submitted
+  email_content: text("email_content").notNull(),
+
+  // Optional: backend explanation or ML scores (can store JSON string)
+  analysis_details: text("analysis_details"),
+
+  // Link each analysis to the user
+  user_uuid: text("user_uuid")
+    .notNull()
+    .references(() => userProfiles.uuid, {
+      onDelete: "cascade",
+      onUpdate: "cascade",
+    }),
+
+  created_at: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
