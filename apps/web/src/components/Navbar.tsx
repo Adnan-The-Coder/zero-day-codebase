@@ -20,7 +20,6 @@ export default function Navbar() {
   const router = useRouter(); // Initialize the useRouter hook for navigation
   console.log("user retrieved as: ", user);
 
-
   const handleSignInClick = () => {
     router.push("/sign-in"); // Redirect to sign-in page
   };

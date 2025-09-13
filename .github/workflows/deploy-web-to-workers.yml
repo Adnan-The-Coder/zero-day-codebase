@@ -17,7 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: apps/web   # run everything inside apps/web
+        working-directory: apps/web   
+    env:
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
