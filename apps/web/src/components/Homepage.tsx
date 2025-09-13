@@ -166,7 +166,7 @@ export default function HomePage() {
       <Pricing />
       <Contact />
       <footer className="relative z-10 py-10 text-center text-xs text-white/50">
-        © {new Date().getFullYear()} Zero • Built for defenders
+        © {new Date().getFullYear()} Z3RO • Built for defenders
       </footer>
     </main>
   );

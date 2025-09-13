@@ -230,13 +230,13 @@ export default function Navbar() {
             <Link href="/" className="flex items-center gap-1 rounded-lg px-1 py-1">
               <Image
                 src={`/assets/logo.png`}
-                alt="Zero Logo"
+                alt="Z3RO Logo"
                 width={28}
                 height={28}
                 className="w-7 h-7"
                 priority
               />
-              <span className="text-lg font-semibold tracking-tight">Zero</span>
+              <span className="text-lg font-semibold tracking-tight">Z3RO</span>
             </Link>
 
             {/* Desktop Navigation Links */}

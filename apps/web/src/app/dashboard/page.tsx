@@ -424,7 +424,7 @@ export default function Page() {
               className="w-7 h-7 sm:w-9 sm:h-9"
             />
             <span className="text-sm md:text-lg font-semibold tracking-wide text-white/90 mr-1">
-              Zero Console
+              Z3RO Console
             </span>
           </Link>
           <Badge color="green">Operational</Badge>
@@ -554,7 +554,7 @@ export default function Page() {
               </Link>
             ))}
             <div className="mt-auto text-xs text-white/40">
-              © {new Date().getFullYear()} Zero • Built for defenders
+              © {new Date().getFullYear()} Z3RO • Built for defenders
             </div>
           </nav>
         </aside>
