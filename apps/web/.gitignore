@@ -41,3 +41,6 @@ next-env.d.ts
 # wrangler files
 .wrangler
 .dev.vars*
+
+# clerk configuration (can include secrets)
+/.clerk/

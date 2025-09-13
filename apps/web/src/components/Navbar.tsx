@@ -3,6 +3,9 @@ import React, { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useUser, SignInButton, UserButton } from '@clerk/nextjs';
+
 
 const links = [
   { name: "Home", href: "/" },
@@ -13,6 +16,14 @@ const links = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const { user, isSignedIn } = useUser(); 
+  const router = useRouter(); // Initialize the useRouter hook for navigation
+
+
+  const handleSignInClick = () => {
+    router.push("/sign-in"); // Redirect to sign-in page
+  };
+
 
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";
@@ -59,7 +70,16 @@ export default function Navbar() {
               ))}
             </ul>
             <div className="hidden items-center gap-2 md:flex">
-              <Link
+              <Link href={isSignedIn ? '#' : "/sign-in"} onClick={isSignedIn ? undefined : handleSignInClick}>
+              <span className="font-orbitron pt-4 text-lg text-white hover:text-purple-500 md:text-3xl">
+                {isSignedIn ? (
+                  <UserButton />
+                ) : (
+                  <SignInButton />
+                )}
+              </span> 
+            </Link>
+              {/* <Link
                 href="/login"
                 className="rounded-xl border border-black/15 px-4 py-2 text-sm font-medium text-black/80 shadow-sm transition hover:shadow md:block dark:border-white/15 dark:text-white/90"
               >
@@ -70,7 +90,7 @@ export default function Navbar() {
                 className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white shadow transition hover:translate-x-0.5 hover:shadow-lg dark:bg-white dark:text-black"
               >
                 Dashboard
-              </Link>
+              </Link> */}
             </div>
             <button
               aria-label="Toggle menu"
