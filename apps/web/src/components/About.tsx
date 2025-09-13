@@ -59,6 +59,135 @@ function TypewriterText({
   );
 }
 
+/* ===================================================================================== */
+/* ADD: Minimal Markdown renderer + Markdown Typewriter (no external deps, TS friendly)  */
+/* ===================================================================================== */
+
+/** Escapes HTML before injecting converted Markdown */
+function escapeHtml(raw: string): string {
+  return raw
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/** Very small Markdown → HTML (bold, italic, code, links, headings, ul, blockquote, paragraphs) */
+function markdownToHtml(md: string): string {
+  // protect code blocks first (```...```)
+  let safe = md.replace(/\r\n/g, "\n");
+  const codeBlocks: string[] = [];
+  safe = safe.replace(/```([\s\S]*?)```/g, (_m, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(`<pre class="rounded bg-black/60 p-3 text-white/90 overflow-x-auto"><code>${escapeHtml(code)}</code></pre>`);
+    return `@@CODEBLOCK_${idx}@@`;
+  });
+
+  // inline code
+  safe = safe.replace(/`([^`]+)`/g, (_m, code) => `<code class="rounded bg-white/10 px-1 py-0.5">${escapeHtml(code)}</code>`);
+
+  // bold (**text**)
+  safe = safe.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+
+  // italic (*text*)
+  safe = safe.replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
+
+  // links [text](url)
+  safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, `<a href="$2" target="_blank" rel="noreferrer" class="underline decoration-white/30 underline-offset-2 hover:decoration-white">$1</a>`);
+
+  // blockquotes
+  safe = safe.replace(/^\s*>\s?(.*)$/gm, `<blockquote class="border-l-2 border-white/20 pl-3 italic opacity-90 mb-2">$1</blockquote>`);
+
+  // headings
+  safe = safe.replace(/^###\s?(.*)$/gm, `<h3 class="text-sm font-semibold mb-1">$1</h3>`);
+  safe = safe.replace(/^##\s?(.*)$/gm, `<h2 class="text-base font-semibold mb-2">$1</h2>`);
+  safe = safe.replace(/^#\s?(.*)$/gm, `<h1 className="text-lg font-semibold mb-2">$1</h1>`);
+
+  // unordered lists (- item)
+  // group consecutive list lines into one <ul>
+  safe = safe.replace(
+    /(^|\n)(-\s[^\n]+(?:\n-\s[^\n]+)*)/g,
+    (_m, p1, block) => {
+      const items = block
+        .split("\n")
+        .map((l: string) => l.trim())
+        .filter(Boolean)
+        .map((l: string) => l.replace(/^- /, ""))
+        .map((txt: string) => `<li>${txt}</li>`)
+        .join("");
+      return `${p1}<ul class="list-disc pl-5 space-y-1 mb-2">${items}</ul>`;
+    }
+  );
+
+  // paragraphs: turn leftover double-newline separated chunks into <p>
+  safe = safe
+    .split(/\n{2,}/)
+    .map((chunk) => {
+      const trimmed = chunk.trim();
+      if (!trimmed) return "";
+      // if already block element, keep as is
+      if (/^<(h[1-3]|ul|pre|blockquote)/.test(trimmed)) return trimmed;
+      if (/^@@CODEBLOCK_\d+@@$/.test(trimmed)) return trimmed;
+      // otherwise wrap into <p>
+      return `<p class="mb-2 last:mb-0">${trimmed.replace(/\n/g, "<br/>")}</p>`;
+    })
+    .join("");
+
+  // restore code blocks
+  safe = safe.replace(/@@CODEBLOCK_(\d+)@@/g, (_m, i) => codeBlocks[Number(i)] ?? "");
+
+  return safe;
+}
+
+function MarkdownBlock({ text }: { text: string }) {
+  const html = markdownToHtml(text);
+  return <div className="prose-invert" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+/** Typewriter that renders Markdown progressively */
+function TypewriterMarkdown({
+  text,
+  speed = 22,
+  startDelay = 120,
+  className = "",
+}: TypewriterProps) {
+  const [shown, setShown] = useState("");
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    let i = 0;
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const starter = setTimeout(() => {
+      interval = setInterval(() => {
+        i += 1;
+        setShown(text.slice(0, i));
+        if (i >= text.length) {
+          if (interval) clearInterval(interval);
+          setDone(true);
+        }
+      }, Math.max(10, speed));
+    }, Math.max(0, startDelay));
+
+    return () => {
+      clearTimeout(starter);
+      if (interval) clearInterval(interval);
+    };
+  }, [text, speed, startDelay]);
+
+  return (
+    <div className={className}>
+      <MarkdownBlock text={shown} />
+      <span
+        aria-hidden
+        className={`ml-[1px] inline-block h-[1em] w-[0.5ch] translate-y-[2px] rounded-sm bg-white/70 align-baseline ${
+          done ? "opacity-0" : "animate-pulse"
+        }`}
+        style={{ animationDuration: "900ms" }}
+      />
+    </div>
+  );
+}
+/* ============================== END ADDITIONS ======================================= */
+
 export default function AboutSection() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);
@@ -101,7 +230,7 @@ export default function AboutSection() {
       let answer = "";
       
       if (contentType.includes("application/json")) {
-        const jsonResponse = await res.json() as { text?: string; message?: string };
+        const jsonResponse = (await res.json()) as { text?: string; message?: string };
         answer = jsonResponse?.text ?? jsonResponse?.message ?? "";
       } else {
         answer = await res.text();
@@ -155,7 +284,7 @@ export default function AboutSection() {
         <div className="rounded-2xl border border-white/10 bg-[#070606]/80 p-4 md:p-6 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
           <div className="mb-3 flex items-center gap-2 text-xs md:text-sm text-white/70">
             <Sparkles className="h-4 w-4 text-white" />
-            Zero • Ask anything about Cybersecurity.
+            Z3RO • Ask anything about Cybersecurity.
           </div>
 
           <div className="space-y-4">
@@ -182,13 +311,16 @@ export default function AboutSection() {
                         : "border-white/10 bg-white text-black"
                     }`}
                   >
+                    {/* ADD: Render assistant with Markdown typewriter; users stay plain text */}
                     {isAssistant && inView ? (
-                      <TypewriterText
+                      <TypewriterMarkdown
                         text={m.content}
                         className="text-sm md:text-base"
                         speed={22}
                         startDelay={120}
                       />
+                    ) : isAssistant ? (
+                      <MarkdownBlock text={m.content} />
                     ) : (
                       <span className="text-start">{m.content}</span>
                     )}
@@ -235,7 +367,7 @@ export default function AboutSection() {
           </form>
 
           <p className="mt-2 text-[11px] text-white/40">
-            Answers are grounded in Zero docs (if a vector store is set).
+            Answers are grounded in Z3RO docs.
           </p>
         </div>
       </div>

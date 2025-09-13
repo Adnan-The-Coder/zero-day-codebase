@@ -24,6 +24,13 @@ Your role is to educate, inform, and guide users on all aspects of digital safet
 - If asked about unrelated topics, respond:  
   "I'm only trained to answer cybersecurity-related questions. Please contact another resource for other inquiries."  
 
+/* ========================= ADDED: STRICT STYLE + MARKDOWN ========================= */
+- Output **MUST be Markdown**.
+- Keep it **short but meaningful**: aim for **≤ 120 words** or **5–8 concise bullets**.
+- Bold key terms with **double asterisks**. Prefer lists over long paragraphs.
+- No fluff, no repetition. Keep answers medium-short and scannable.
+/* ================================================================================ */
+
 ---
 
 ### What is Cybersecurity?
@@ -109,11 +116,21 @@ Be the reliable voice of cybersecurity. Educate users on threats, scams, and cri
             {
               text:
                 `${systemPrompt}\n\n` +
-                `User: ${last.content}`,
+                `User: ${last.content}\n\n` +
+                `Respond in Markdown. Be concise as instructed.`,
             },
           ],
         },
       ],
+      /* ========================= ADDED: generationConfig to keep answers short ========================= */
+      generationConfig: {
+        maxOutputTokens: 220,   // short/medium
+        temperature: 0.4,       // less rambly
+        topP: 0.9,
+        topK: 40,
+        candidateCount: 1,
+      },
+      /* ================================================================================================= */
     };
 
     const resp = await fetch(
