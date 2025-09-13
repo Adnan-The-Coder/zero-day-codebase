@@ -6,6 +6,7 @@ import React from "react";
 import Pricing from "./Pricing";
 import Contact from "./Contact";
 import Information from "./Information";
+import AboutSection from "./About";
 
 export default function HomePage() {
   return (
@@ -67,6 +68,14 @@ export default function HomePage() {
             <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span>
             Private Beta • Enterprise-ready
           </div>
+        </motion.div>
+        <motion.div
+          className="mt-14 flex justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.35, ease: "easeOut", delay: 0.35 }}
+        >
+          <AboutSection/>
         </motion.div>
       </motion.section>
       <section id="features" className="relative z-10 mx-auto max-w-6xl px-4 py-16 md:py-24">
