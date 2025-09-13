@@ -133,9 +133,19 @@ Be the reliable voice of cybersecurity. Educate users on threats, scams, and cri
       return new Response(`Gemini error: ${errText}`, { status: resp.status });
     }
 
-    const data = await resp.json();
+    type GeminiCandidate = {
+      content?: {
+        parts?: { text?: string }[];
+      };
+    };
+
+    type GeminiResponse = {
+      candidates?: GeminiCandidate[];
+    };
+
+    const data = (await resp.json()) as GeminiResponse;
     const reply =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
+      data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
       "Sorry, I couldn't generate a response.";
 
     return new Response(reply, {
