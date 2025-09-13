@@ -91,17 +91,21 @@ export default function AboutSection() {
     setInput("");
 
     try {
-      const res = await fetch("/api/Zero-chat", {
+      const res = await fetch("/api/zero-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: nextMessages }),
       });
 
       const contentType = res.headers.get("content-type") || "";
-      const answer =
-        contentType.includes("application/json")
-          ? (await res.json())?.text ?? ""
-          : await res.text();
+      let answer = "";
+      
+      if (contentType.includes("application/json")) {
+        const jsonResponse = await res.json() as { text?: string; message?: string };
+        answer = jsonResponse?.text ?? jsonResponse?.message ?? "";
+      } else {
+        answer = await res.text();
+      }
 
       setMessages((prev) => [
         ...prev,
