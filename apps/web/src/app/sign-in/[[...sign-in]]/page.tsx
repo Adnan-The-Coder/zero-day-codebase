@@ -1,7 +1,5 @@
 import { SignedOut, SignIn } from "@clerk/nextjs";
 
-export const runtime = 'edge';
-
 export default function Page() {
     return (
       <div className="sign-in-container" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
