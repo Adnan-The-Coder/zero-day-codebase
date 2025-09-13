@@ -13,6 +13,7 @@
     "nx": "^21.4.1"
   },
   "dependencies": {
+    "@tensorflow/tfjs": "^4.22.0",
     "chart.js": "^4.5.0",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.543.0",
