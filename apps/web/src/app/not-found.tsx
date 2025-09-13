@@ -45,8 +45,8 @@ export default function NotFoundPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: "easeOut", delay: 0.15 }}
         >
-          The route you're looking for doesn't exist, was renamed, or is
-          currently offline. Let's get you back to safety.
+          The route you`re looking for doesn`t exist, was renamed, or is
+          currently offline. Let`s get you back to safety.
         </motion.p>
 
         <motion.div

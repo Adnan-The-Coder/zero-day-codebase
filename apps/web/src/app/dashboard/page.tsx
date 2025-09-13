@@ -290,9 +290,9 @@ function exportDashboardSummary(filename: string) {
       }
     });
   };
-  // @ts-ignore
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   printWindow.document.fonts && printWindow.document.fonts.ready
-    ? // @ts-ignore
+    ?
       printWindow.document.fonts.ready.then(waitForImages)
     : waitForImages();
   printWindow.onafterprint = () => {

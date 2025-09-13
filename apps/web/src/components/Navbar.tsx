@@ -18,6 +18,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const { user, isSignedIn } = useUser(); 
   const router = useRouter(); // Initialize the useRouter hook for navigation
+  console.log("user retrieved as: ", user);
 
 
   const handleSignInClick = () => {
