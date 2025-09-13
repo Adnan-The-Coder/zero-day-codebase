@@ -15,7 +15,7 @@ import {
 } from "chart.js";
 import { Doughnut, Bar, Line } from "react-chartjs-2";
 import Image from "next/image";
-import { Bell } from "lucide-react";
+import { Bell, BellDot } from "lucide-react";
 import Link from "next/link";
 
 ChartJS.register(
@@ -437,7 +437,7 @@ export default function Page() {
                 <Bell size={20} />
               </button>
               <button
-                onClick={() => exportDashboardSummary("Zero_Dashboard_Report.pdf")}
+                onClick={() => exportDashboardSummary("Your_Dashboard_Report.pdf")}
                 className="ml-2 inline-flex items-center gap-2 rounded-xl bg-white/5 p-2 text-xs md:text-sm hover:bg-white/10"
                 aria-label="Generate dashboard report"
                 title="Generate a printable report of all sections"
@@ -477,7 +477,7 @@ export default function Page() {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-[1400px] grid-cols-1 xl:grid-cols-[240px_1fr]">
+      <div className="mx-auto grid max-w-[1600px] grid-cols-1 xl:grid-cols-[240px_1fr]">
         <aside className="hidden xl:block border-r border-white/10">
           <nav className="sticky top-14 flex h-[calc(100vh-56px)] flex-col gap-2 p-3">
             {[
@@ -543,6 +543,46 @@ export default function Page() {
                   </svg>
                 ),
               },
+              {
+                label: "Safe Speech",
+                link: "#safespeech",
+                icon: (
+                  <svg
+                    className="h-5 w-5 text-white/60 flex-shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    <path d="M9 10h6" />
+                    <path d="M9 14h2" />
+                  </svg>
+                ),
+              },              
+              {
+                label: "Infer Secure",
+                link: "#infersecure",
+                icon: (
+                  <svg
+                    className="h-5 w-5 text-white/60 flex-shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M9 12a3 3 0 1 1 6 0v1" />
+                    <rect x="9" y="13" width="6" height="5" rx="1" />
+                    <path d="M12 17v1" />
+                    <path d="M12 3a9 9 0 0 0-9 9c0 3.9 2.5 7.3 6 8.5" />
+                    <path d="M12 3a9 9 0 0 1 9 9c0 3.9-2.5 7.3-6 8.5" />
+                  </svg>
+                ),
+              }
             ].map((i, idx) => (
               <Link
                 key={idx}
@@ -574,7 +614,7 @@ export default function Page() {
                 animate={{ x: 0 }}
                 exit={{ x: -320 }}
                 transition={{ type: "spring", stiffness: 260, damping: 28 }}
-                className="relative h-full w-[50%] max-w-[320px] border-r border-white/10 bg-[#0e0e0f] p-3"
+                className="relative h-full w-[50%] max-w-[320px] border-r justify-between flex flex-col border-white/10 bg-[#0e0e0f] p-3"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mb-3 flex items-center justify-between">
@@ -586,7 +626,7 @@ export default function Page() {
                       height={10000}
                       className="w-8 h-8"
                     />
-                    <span className="text-sm font-semibold">Zero</span>
+                    <span className="text-sm font-semibold">Z3RO</span>
                   </Link>
                   <button
                     onClick={() => setOpen(false)}
@@ -595,7 +635,7 @@ export default function Page() {
                     <Icon path="M6 18L18 6M6 6l12 12" />
                   </button>
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 mb-20">
                   {[
                     { label: "Overview", icon: "M3 12h18M12 3v18", link: "#overview" },
                     {
@@ -625,18 +665,41 @@ export default function Page() {
                       <span>{i.label}</span>
                     </Link>
                   ))}
-
-                  {/* Mobile: Generate Report quick action */}
-                  <button
-                    onClick={() => exportDashboardSummary("Zero_Dashboard_Report.pdf")}
-                    className="mt-2 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
-                  >
-                    <Icon
-                      className="h-5 w-5"
-                      path="M6 9V3h9l3 3v3M6 18h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2z M14 18v3H6v-3"
-                    />
-                    Generate Report
-                  </button>
+                </div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div className="flex flex-col gap-1 mb-5">
+                <button
+                  className="mt-2 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+                >
+                  <BellDot className="h-5 w-5" size={10}/>
+                  Notifications
+                </button>
+                <button
+                  onClick={() => exportDashboardSummary("Zero_Dashboard_Report.pdf")}
+                  className="mt-2 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+                >
+                  <Icon
+                    className="h-5 w-5"
+                    path="M6 9V3h9l3 3v3M6 18h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2z M14 18v3H6v-3"
+                  />
+                  Generate Report
+                </button>
                 </div>
               </motion.aside>
             </motion.div>
