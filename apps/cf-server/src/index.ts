@@ -4,6 +4,7 @@ import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
 import { requestId } from "hono/request-id";
 import contactRoutes from "./routes/contact";
+import userRoutes from "./routes/user";
 
 
 interface CloudflareBindings {
@@ -223,5 +224,6 @@ app.get("/status", (c) => {
 });
 
 app.route("/contact", contactRoutes);
+app.route("/users", userRoutes);
 
 export default app;
