@@ -190,22 +190,22 @@ export default function AboutSection() {
                         startDelay={120}
                       />
                     ) : (
-                      <span>{m.content}</span>
+                      <span className="text-start">{m.content}</span>
                     )}
 
                     {isAssistant && ctaReady[idx] && (
                       <div className="mt-6 mb-1 flex flex-wrap gap-2">
                         <Link
-                          href="/about"
+                          href="#features"
                           className="inline-flex cursor-default items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-xs md:text-sm font-medium text-black hover:bg-white/90"
                         >
-                          Learn about us
+                          Features
                         </Link>
                         <Link
-                          href="/services"
+                          href="/dashboard"
                           className="inline-flex cursor-default items-center gap-2 rounded-xl border border-white/15 bg-black/40 px-3.5 py-2 text-xs md:text-sm font-medium text-white hover:bg-white/5"
                         >
-                          Explore services
+                          Dashboar
                         </Link>
                       </div>
                     )}
