@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Chart as ChartJS,
@@ -72,6 +72,294 @@ const Icon = ({
   </svg>
 );
 
+/** ---------- HF API CONFIG + HELPERS ---------- **/
+const HF_API_URL_ZS =
+  "https://api-inference.huggingface.co/models/facebook/bart-large-mnli"; // zero-shot
+const HF_API_URL_TOX =
+  "https://api-inference.huggingface.co/models/unitary/toxic-bert"; // toxicity
+const HF_API_URL_THREAT =
+  "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"; // threat analysis
+const HF_API_URL_MALWARE =
+  "https://api-inference.huggingface.co/models/distilbert-base-uncased"; // malware detection
+const HF_API_URL_PREDICTION =
+  "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"; // threat prediction
+const HF_API_URL_SOCIAL_ENG =
+  "https://api-inference.huggingface.co/models/facebook/bart-large-mnli"; // social engineering
+const HF_API_URL_QUANTUM =
+  "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"; // quantum analysis
+const HF_API_URL_INCIDENT =
+  "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"; // incident response
+const HF_TOKEN = process.env.NEXT_PUBLIC_HF_TOKEN || ""; // put NEXT_PUBLIC_HF_TOKEN in your .env
+
+// Abortable fetch wrapper for "realtime" feel
+async function hfPost(url: string, body: any, signal?: AbortSignal) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${HF_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try {
+      const j: { error?: string } = await res.json();
+      if (j && typeof j.error === "string") msg += ` — ${j.error}`;
+    } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+// Zero-shot with hypothesis template for better calibration
+async function hfZeroShot(
+  text: string,
+  labels: string[],
+  multi = true,
+  signal?: AbortSignal
+) {
+  const template = "This text is about {}.";
+  const out = (await hfPost(
+    HF_API_URL_ZS,
+    {
+      inputs: text,
+      parameters: {
+        candidate_labels: labels,
+        multi_label: multi,
+        hypothesis_template: template,
+      },
+    },
+    signal
+  )) as { labels: string[]; scores: number[] };
+  return out;
+}
+
+async function hfToxic(text: string, signal?: AbortSignal) {
+  const out = await hfPost(HF_API_URL_TOX, { inputs: text }, signal);
+  return out as any;
+}
+
+// Threat intelligence analysis functions
+async function analyzeThreatIntelligence(text: string, signal?: AbortSignal) {
+  const threatLabels = ["malware", "phishing", "ransomware", "apt", "botnet", "exploit", "vulnerability", "benign"];
+  const summary = `Threat intelligence analysis: ${text}`;
+  
+  try {
+    const threatAnalysis = await hfZeroShot(summary, threatLabels, true, signal);
+    return mapScores(threatAnalysis.labels, threatAnalysis.scores, threatLabels);
+  } catch (error) {
+    console.error("Threat analysis error:", error);
+    return {};
+  }
+}
+
+async function analyzeMalwareIndicators(text: string, signal?: AbortSignal) {
+  const malwareLabels = ["trojan", "virus", "worm", "rootkit", "backdoor", "spyware", "adware", "clean"];
+  const summary = `Malware analysis: ${text}`;
+  
+  try {
+    const malwareAnalysis = await hfZeroShot(summary, malwareLabels, true, signal);
+    return mapScores(malwareAnalysis.labels, malwareAnalysis.scores, malwareLabels);
+  } catch (error) {
+    console.error("Malware analysis error:", error);
+    return {};
+  }
+}
+
+async function analyzeNetworkThreats(text: string, signal?: AbortSignal) {
+  const networkLabels = ["ddos", "brute_force", "port_scan", "sql_injection", "xss", "man_in_middle", "normal_traffic"];
+  const summary = `Network security analysis: ${text}`;
+  
+  try {
+    const networkAnalysis = await hfZeroShot(summary, networkLabels, true, signal);
+    return mapScores(networkAnalysis.labels, networkAnalysis.scores, networkLabels);
+  } catch (error) {
+    console.error("Network analysis error:", error);
+    return {};
+  }
+}
+
+// New analysis functions for the 4 revolutionary features
+async function analyzeThreatPrediction(networkData: string, userBehavior: string, signal?: AbortSignal) {
+  const predictionLabels = ["ddos_attack", "phishing_campaign", "malware_injection", "data_breach", "insider_threat", "normal_activity"];
+  const summary = `Threat prediction analysis: Network data: ${networkData}, User behavior: ${userBehavior}`;
+  
+  try {
+    const predictionAnalysis = await hfZeroShot(summary, predictionLabels, true, signal);
+    return mapScores(predictionAnalysis.labels, predictionAnalysis.scores, predictionLabels);
+  } catch (error) {
+    console.error("Threat prediction error:", error);
+    return {};
+  }
+}
+
+async function analyzeSocialEngineering(text: string, signal?: AbortSignal) {
+  const socialEngLabels = ["phishing", "vishing", "smishing", "pretexting", "baiting", "quid_pro_quo", "tailgating", "legitimate"];
+  const summary = `Social engineering analysis: ${text}`;
+  
+  try {
+    const socialEngAnalysis = await hfZeroShot(summary, socialEngLabels, true, signal);
+    return mapScores(socialEngAnalysis.labels, socialEngAnalysis.scores, socialEngLabels);
+  } catch (error) {
+    console.error("Social engineering analysis error:", error);
+    return {};
+  }
+}
+
+async function analyzeQuantumThreats(encryptionData: string, signal?: AbortSignal) {
+  const quantumLabels = ["quantum_vulnerable", "quantum_safe", "hybrid_approach", "post_quantum_ready", "immediate_action_needed"];
+  const summary = `Quantum security analysis: ${encryptionData}`;
+  
+  try {
+    const quantumAnalysis = await hfZeroShot(summary, quantumLabels, true, signal);
+    return mapScores(quantumAnalysis.labels, quantumAnalysis.scores, quantumLabels);
+  } catch (error) {
+    console.error("Quantum analysis error:", error);
+    return {};
+  }
+}
+
+async function analyzeIncidentResponse(incidentData: string, signal?: AbortSignal) {
+  const incidentLabels = ["auto_isolate", "escalate_human", "auto_remediate", "monitor_only", "emergency_shutdown", "normal_operation"];
+  const summary = `Incident response analysis: ${incidentData}`;
+  
+  try {
+    const incidentAnalysis = await hfZeroShot(summary, incidentLabels, true, signal);
+    return mapScores(incidentAnalysis.labels, incidentAnalysis.scores, incidentLabels);
+  } catch (error) {
+    console.error("Incident response analysis error:", error);
+    return {};
+  }
+}
+
+function clampText(t: string, max = 8000) {
+  return t?.length > max ? t.slice(0, max) : t || "";
+}
+
+const STOPWORDS = new Set(
+  "a,an,the,and,or,but,if,then,of,in,on,at,for,to,from,with,as,by,is,are,was,were,be,being,been,that,this,those,these,you,your,me,my,i,we,us,our".split(
+    ","
+  )
+);
+
+function wordCount(s: string) {
+  return (s.match(/\b[\p{L}\p{N}’']+\b/gu) || []).length;
+}
+
+function containsURL(s: string) {
+  return /(https?:\/\/|www\.)/i.test(s);
+}
+
+const RISK_KWS = [
+  "urgent",
+  "immediately",
+  "verify",
+  "password",
+  "suspend",
+  "locked",
+  "invoice",
+  "payment",
+  "gift card",
+  "bank",
+  "login",
+  "reset",
+  "code",
+  "otp",
+  "prize",
+  "winner",
+  "limited time",
+  "act now",
+  "final notice",
+  "deactivate",
+  "click here",
+  "confirm",
+  "update account",
+  "security alert",
+];
+
+const SAFE_KWS = [
+  "hello",
+  "hey there",
+  "hi",
+  "thanks",
+  "thank you",
+  "best regards",
+  "talk soon",
+  "check in",
+  "let's connect",
+];
+
+// keyword extractor with minimal false positives
+function simpleKeywordExplain(text: string) {
+  const lower = text.toLowerCase();
+  const found = RISK_KWS.filter((k) => lower.includes(k));
+  // remove safe greetings
+  const safe = SAFE_KWS.some((k) => lower.startsWith(k));
+  return safe ? [] : Array.from(new Set(found));
+}
+
+function fileHeuristics(text: string, file?: File) {
+  const lower = (text || "").toLowerCase();
+  const linkRegex = /(https?:\/\/[^\s)>'"]+|www\.[^\s)>'"]+)/gi;
+  const emailRegex = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
+  const links = text.match(linkRegex) || [];
+  const emails = text.match(emailRegex) || [];
+  const hasJSMarker =
+    lower.includes("/js") || lower.includes("javascript:") || /\.js(\?|$)/.test(lower);
+  const hasMacroWords = lower.includes("macro") || lower.includes("vba");
+  const hasThreatWords = ["suspend", "locked", "deactivate", "verify", "penalty"].some(
+    (w) => lower.includes(w)
+  );
+  const hasMoneyWords = ["invoice", "payment", "bank", "gift card", "crypto", "btc"].some(
+    (w) => lower.includes(w)
+  );
+  const hasAttachmentCue =
+    lower.includes(".exe") ||
+    lower.includes(".scr") ||
+    lower.includes(".js") ||
+    lower.includes(".vbs") ||
+    lower.includes(".bat");
+  let risk = 0;
+  if (links.length >= 1 && containsURL(text)) risk += Math.min(0.25, links.length * 0.06);
+  if (emails.length > 1) risk += 0.15;
+  if (hasJSMarker) risk += 0.2;
+  if (hasMacroWords) risk += 0.2;
+  if (hasThreatWords) risk += 0.15;
+  if (hasMoneyWords) risk += 0.15;
+  if (hasAttachmentCue) risk += 0.15;
+  if (file && file.size > 10 * 1024 * 1024) risk += 0.1;
+  risk = Math.max(0, Math.min(1, risk));
+  return {
+    name: file?.name ?? "pasted.txt",
+    sizeBytes: file?.size ?? text.length,
+    linkCount: links.length,
+    emailCount: emails.length,
+    hasJSMarker,
+    hasMacroWords,
+    hasThreatWords,
+    hasMoneyWords,
+    hasAttachmentCue,
+    heuristicRisk: Number(risk.toFixed(3)),
+    sampleLinks: links.slice(0, 6),
+  };
+}
+
+function verdictFrom(score: number): "LOW" | "MEDIUM" | "HIGH" {
+  if (score >= 0.75) return "HIGH";
+  if (score >= 0.45) return "MEDIUM";
+  return "LOW";
+}
+
+// Utility: calibrate multi-label scores into a map with all labels
+function mapScores(labels: string[], scores: number[], all: string[]) {
+  const m: Record<string, number> = {};
+  all.forEach((l) => (m[l] = 0));
+  labels.forEach((l, i) => (m[l] = Number(scores[i]?.toFixed(4)) || 0));
+  return m;
+}
+
 /** ---------- EXPORT UTILS (SECTION) ---------- **/
 function exportSectionToPDF(sectionId: string, filename: string) {
   const section = document.getElementById(sectionId);
@@ -93,9 +381,7 @@ function exportSectionToPDF(sectionId: string, filename: string) {
       if (cloneCanvas && cloneCanvas.parentNode) {
         cloneCanvas.parentNode.replaceChild(img, cloneCanvas);
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
   });
 
   const printWindow = window.open("", "_blank", "width=1024,height=768");
@@ -114,9 +400,6 @@ function exportSectionToPDF(sectionId: string, filename: string) {
     .muted { color: #6b7280; font-size: 12px; }
     img { max-width: 100%; height: auto; }
     .grid { display: grid; gap: 12px; }
-    .mt-12 { margin-top: 12px; }
-    .title { font-weight: 700; font-size: 18px; margin-bottom: 8px; }
-    .subtitle { font-weight: 600; font-size: 14px; margin: 12px 0 6px; }
   `;
 
   const now = new Date();
@@ -171,14 +454,23 @@ function exportSectionToPDF(sectionId: string, filename: string) {
 }
 
 /** ---------- EXPORT UTILS (DASHBOARD SUMMARY) ---------- **/
-function exportDashboardSummary(filename: string) {
-  const sectionIds = ["overview", "vendors", "compliance", "incidents"];
+function exportDashboardSummary(filename: string, analysisData?: {
+  safeSpeech?: any;
+  inferSecure?: any;
+  threatIntelligence?: any;
+  threatPrediction?: any;
+  socialEngineering?: any;
+  quantumAdvisor?: any;
+  incidentResponse?: any;
+  phishingScore?: number;
+  vendorData?: any[];
+}) {
+  const sectionIds = ["overview", "vendors", "safespeech", "threatintel", "threatprediction", "socialdefense", "quantumadvisor", "incidentresponse", "infersecure"];
   const sections = sectionIds
     .map((id) => document.getElementById(id))
     .filter(Boolean) as HTMLElement[];
   if (!sections.length) return;
 
-  // Helper: convert canvases to images inside a cloned node
   const cloneWithCanvasAsImages = (source: HTMLElement) => {
     const cloned = source.cloneNode(true) as HTMLElement;
     const origCanvases = source.querySelectorAll("canvas");
@@ -217,7 +509,6 @@ function exportDashboardSummary(filename: string) {
   const now = new Date();
   const printedAt = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
 
-  // Build a printable document
   const container = document.createElement("div");
   container.className = "wrap";
 
@@ -232,12 +523,92 @@ function exportDashboardSummary(filename: string) {
   `;
   container.appendChild(heading);
 
+  // Add real-time analysis summary if data is available
+  if (analysisData) {
+    const summarySection = document.createElement("div");
+    summarySection.className = "section";
+    summarySection.innerHTML = `
+      <h2 style="font-size:15px;font-weight:700;margin-bottom:8px;">Real-time Analysis Summary</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px;">
+        ${analysisData.safeSpeech ? `
+          <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fff;">
+            <h3 style="font-size:13px;font-weight:600;margin-bottom:6px;color:#1f2937;">Safe Speech Analysis</h3>
+            <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Verdict: <strong style="color:${analysisData.safeSpeech.verdict === 'LIKELY BENIGN' ? '#10b981' : '#ef4444'}">${analysisData.safeSpeech.verdict}</strong></p>
+            <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Manipulative Score: ${(analysisData.safeSpeech.manipulativeScore * 100).toFixed(1)}%</p>
+            <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Toxicity: ${(analysisData.safeSpeech.toxicity * 100).toFixed(1)}%</p>
+            <p style="font-size:11px;color:#6b7280;">Confidence: ${(analysisData.safeSpeech.confidence * 100).toFixed(1)}%</p>
+          </div>
+        ` : ''}
+        ${analysisData.inferSecure ? `
+          <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fff;">
+            <h3 style="font-size:13px;font-weight:600;margin-bottom:6px;color:#1f2937;">Infer Secure Analysis</h3>
+            <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Risk Level: <strong style="color:${analysisData.inferSecure.verdict === 'HIGH' ? '#ef4444' : analysisData.inferSecure.verdict === 'MEDIUM' ? '#f59e0b' : '#10b981'}">${analysisData.inferSecure.verdict}</strong></p>
+            <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Risk Score: ${(analysisData.inferSecure.riskScore * 100).toFixed(1)}%</p>
+            <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">File: ${analysisData.inferSecure.heuristics?.name || 'Unknown'}</p>
+            <p style="font-size:11px;color:#6b7280;">Confidence: ${(analysisData.inferSecure.confidence * 100).toFixed(1)}%</p>
+          </div>
+        ` : ''}
+         ${analysisData.threatIntelligence ? `
+           <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fff;">
+             <h3 style="font-size:13px;font-weight:600;margin-bottom:6px;color:#1f2937;">Threat Intelligence</h3>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Risk Level: <strong style="color:${analysisData.threatIntelligence.overallRisk > 0.7 ? '#ef4444' : analysisData.threatIntelligence.overallRisk > 0.4 ? '#f59e0b' : '#10b981'}">${analysisData.threatIntelligence.overallRisk > 0.7 ? 'HIGH' : analysisData.threatIntelligence.overallRisk > 0.4 ? 'MEDIUM' : 'LOW'}</strong></p>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Overall Risk: ${(analysisData.threatIntelligence.overallRisk * 100).toFixed(1)}%</p>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Top Threats: ${analysisData.threatIntelligence.topThreats?.join(', ') || 'None detected'}</p>
+             <p style="font-size:11px;color:#6b7280;">Confidence: ${(analysisData.threatIntelligence.confidence * 100).toFixed(1)}%</p>
+           </div>
+         ` : ''}
+         ${analysisData.threatPrediction ? `
+           <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fff;">
+             <h3 style="font-size:13px;font-weight:600;margin-bottom:6px;color:#1f2937;">Threat Prediction</h3>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Risk Level: <strong style="color:${analysisData.threatPrediction.riskLevel > 0.7 ? '#ef4444' : analysisData.threatPrediction.riskLevel > 0.4 ? '#f59e0b' : '#10b981'}">${analysisData.threatPrediction.riskLevel > 0.7 ? 'HIGH' : analysisData.threatPrediction.riskLevel > 0.4 ? 'MEDIUM' : 'LOW'}</strong></p>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Risk Score: ${(analysisData.threatPrediction.riskLevel * 100).toFixed(1)}%</p>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Predicted Threats: ${analysisData.threatPrediction.topThreats?.join(', ') || 'None detected'}</p>
+             <p style="font-size:11px;color:#6b7280;">Confidence: ${(analysisData.threatPrediction.confidence * 100).toFixed(1)}%</p>
+           </div>
+         ` : ''}
+         ${analysisData.socialEngineering ? `
+           <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fff;">
+             <h3 style="font-size:13px;font-weight:600;margin-bottom:6px;color:#1f2937;">Social Engineering Defense</h3>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Attack Type: <strong style="color:${analysisData.socialEngineering.riskLevel > 0.7 ? '#ef4444' : analysisData.socialEngineering.riskLevel > 0.4 ? '#f59e0b' : '#10b981'}">${analysisData.socialEngineering.attackType?.toUpperCase() || 'UNKNOWN'}</strong></p>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Risk Level: ${(analysisData.socialEngineering.riskLevel * 100).toFixed(1)}%</p>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Defense Recommendations: ${analysisData.socialEngineering.defenseRecommendations?.length || 0} provided</p>
+             <p style="font-size:11px;color:#6b7280;">Confidence: ${(analysisData.socialEngineering.confidence * 100).toFixed(1)}%</p>
+           </div>
+         ` : ''}
+         ${analysisData.quantumAdvisor ? `
+           <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fff;">
+             <h3 style="font-size:13px;font-weight:600;margin-bottom:6px;color:#1f2937;">Quantum-Safe Encryption</h3>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Vulnerability: <strong style="color:${analysisData.quantumAdvisor.vulnerabilityLevel > 0.7 ? '#ef4444' : analysisData.quantumAdvisor.vulnerabilityLevel > 0.4 ? '#f59e0b' : '#10b981'}">${analysisData.quantumAdvisor.vulnerabilityLevel > 0.7 ? 'HIGH' : analysisData.quantumAdvisor.vulnerabilityLevel > 0.4 ? 'MEDIUM' : 'LOW'}</strong></p>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Vulnerability Level: ${(analysisData.quantumAdvisor.vulnerabilityLevel * 100).toFixed(1)}%</p>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Recommendations: ${analysisData.quantumAdvisor.recommendations?.length || 0} provided</p>
+             <p style="font-size:11px;color:#6b7280;">Confidence: ${(analysisData.quantumAdvisor.confidence * 100).toFixed(1)}%</p>
+           </div>
+         ` : ''}
+         ${analysisData.incidentResponse ? `
+           <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fff;">
+             <h3 style="font-size:13px;font-weight:600;margin-bottom:6px;color:#1f2937;">Incident Response</h3>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Response Action: <strong style="color:${analysisData.incidentResponse.severity > 0.7 ? '#ef4444' : analysisData.incidentResponse.severity > 0.4 ? '#f59e0b' : '#10b981'}">${analysisData.incidentResponse.responseAction?.replace(/_/g, ' ').toUpperCase() || 'UNKNOWN'}</strong></p>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Severity: ${(analysisData.incidentResponse.severity * 100).toFixed(1)}%</p>
+             <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Automated Actions: ${analysisData.incidentResponse.automatedActions?.length || 0} triggered</p>
+             <p style="font-size:11px;color:#6b7280;">Confidence: ${(analysisData.incidentResponse.confidence * 100).toFixed(1)}%</p>
+           </div>
+         ` : ''}
+        ${analysisData.phishingScore !== undefined ? `
+          <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fff;">
+            <h3 style="font-size:13px;font-weight:600;margin-bottom:6px;color:#1f2937;">Phishing Detection</h3>
+            <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Phishing Score: <strong style="color:${analysisData.phishingScore > 70 ? '#ef4444' : analysisData.phishingScore > 40 ? '#f59e0b' : '#10b981'}">${analysisData.phishingScore}%</strong></p>
+            <p style="font-size:11px;color:#6b7280;margin-bottom:4px;">Status: ${analysisData.phishingScore > 70 ? 'High Risk' : analysisData.phishingScore > 40 ? 'Medium Risk' : 'Low Risk'}</p>
+          </div>
+        ` : ''}
+      </div>
+    `;
+    container.appendChild(summarySection);
+  }
+
   sections.forEach((s) => {
-    // Title line from section's h2 if present
     const title = s.querySelector("h2")?.textContent ?? s.id;
     const cloned = cloneWithCanvasAsImages(s);
 
-    // Remove tailwind dark classes for print
     const stripDarkClasses = (node: HTMLElement) => {
       node.className = (node.className || "")
         .replace(/bg-.*?(?=\s|$)/g, "")
@@ -290,11 +661,9 @@ function exportDashboardSummary(filename: string) {
       }
     });
   };
-  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-  printWindow.document.fonts && printWindow.document.fonts.ready
-    ?
-      printWindow.document.fonts.ready.then(waitForImages)
-    : waitForImages();
+  (printWindow.document.fonts && printWindow.document.fonts.ready
+    ? printWindow.document.fonts.ready.then(waitForImages)
+    : waitForImages());
   printWindow.onafterprint = () => {
     printWindow.close();
   };
@@ -302,10 +671,502 @@ function exportDashboardSummary(filename: string) {
 }
 
 export default function Page() {
-  /** ---------- DASHBOARD STATE / CHARTS ---------- **/
+  /** ---------- STATE ---------- **/
   const [open, setOpen] = useState(false);
   const phishingScore = 87;
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+
+  // Safe Speech
+  const [safeText, setSafeText] = useState("");
+  const [safeLoading, setSafeLoading] = useState(false);
+  const [safeErr, setSafeErr] = useState<string | null>(null);
+  const [safeOut, setSafeOut] = useState<null | {
+    verdict: string;
+    manipulativeScore: number;
+    tacticScores: Record<string, number>;
+    toxicity: number;
+    keywords: string[];
+    benignScore: number;
+    confidence: number;
+  }>(null);
+  const safeAbort = useRef<AbortController | null>(null);
+  const safeTypingTimer = useRef<any>(null);
+
+  // Infer Secure
+  const [infFile, setInfFile] = useState<File | null>(null);
+  const [infLoading, setInfLoading] = useState(false);
+  const [infErr, setInfErr] = useState<string | null>(null);
+  const [infOut, setInfOut] = useState<null | {
+    verdict: "LOW" | "MEDIUM" | "HIGH";
+    riskScore: number;
+    mlScores: Record<string, number>;
+    heuristics: any;
+    confidence: number;
+  }>(null);
+
+  // Threat Intelligence
+  const [threatText, setThreatText] = useState("");
+  const [threatLoading, setThreatLoading] = useState(false);
+  const [threatErr, setThreatErr] = useState<string | null>(null);
+  const [threatOut, setThreatOut] = useState<null | {
+    threatScores: Record<string, number>;
+    malwareScores: Record<string, number>;
+    networkScores: Record<string, number>;
+    overallRisk: number;
+    topThreats: string[];
+    confidence: number;
+  }>(null);
+  const threatAbort = useRef<AbortController | null>(null);
+  const threatTypingTimer = useRef<any>(null);
+
+  // NEW: AI-Powered Cyber Threat Prediction Engine
+  const [predictionNetworkData, setPredictionNetworkData] = useState("");
+  const [predictionUserBehavior, setPredictionUserBehavior] = useState("");
+  const [predictionLoading, setPredictionLoading] = useState(false);
+  const [predictionErr, setPredictionErr] = useState<string | null>(null);
+  const [predictionOut, setPredictionOut] = useState<null | {
+    predictionScores: Record<string, number>;
+    topThreats: string[];
+    riskLevel: number;
+    recommendations: string[];
+    confidence: number;
+  }>(null);
+  const predictionAbort = useRef<AbortController | null>(null);
+  const predictionTypingTimer = useRef<any>(null);
+
+  // NEW: AI-Powered Social Engineering Defense
+  const [socialEngText, setSocialEngText] = useState("");
+  const [socialEngLoading, setSocialEngLoading] = useState(false);
+  const [socialEngErr, setSocialEngErr] = useState<string | null>(null);
+  const [socialEngOut, setSocialEngOut] = useState<null | {
+    socialEngScores: Record<string, number>;
+    attackType: string;
+    riskLevel: number;
+    defenseRecommendations: string[];
+    confidence: number;
+  }>(null);
+  const socialEngAbort = useRef<AbortController | null>(null);
+  const socialEngTypingTimer = useRef<any>(null);
+
+  // NEW: Quantum-Safe Encryption Advisor
+  const [quantumEncryptionData, setQuantumEncryptionData] = useState("");
+  const [quantumLoading, setQuantumLoading] = useState(false);
+  const [quantumErr, setQuantumErr] = useState<string | null>(null);
+  const [quantumOut, setQuantumOut] = useState<null | {
+    quantumScores: Record<string, number>;
+    vulnerabilityLevel: number;
+    recommendations: string[];
+    migrationPlan: string[];
+    confidence: number;
+  }>(null);
+  const quantumAbort = useRef<AbortController | null>(null);
+  const quantumTypingTimer = useRef<any>(null);
+
+  // NEW: AI-Powered Incident Response Orchestrator
+  const [incidentData, setIncidentData] = useState("");
+  const [incidentLoading, setIncidentLoading] = useState(false);
+  const [incidentErr, setIncidentErr] = useState<string | null>(null);
+  const [incidentOut, setIncidentOut] = useState<null | {
+    incidentScores: Record<string, number>;
+    responseAction: string;
+    severity: number;
+    automatedActions: string[];
+    confidence: number;
+  }>(null);
+  const incidentAbort = useRef<AbortController | null>(null);
+  const incidentTypingTimer = useRef<any>(null);
+
+  /** ---------- CHART CONFIGS ---------- **/
+  const safeTacticsBar = useMemo(() => {
+    const labels = ["urgent", "fear-based", "reward", "threat", "benign"];
+    const values = labels.map((l) => (safeOut?.tacticScores?.[l] ?? 0) * 100);
+    return {
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Tactic score (%)",
+            data: values,
+            backgroundColor: "#3b82f6",
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
+          y: {
+            grid: { color: "rgba(255,255,255,0.06)" },
+            ticks: { color: "#9CA3AF" },
+            suggestedMax: 100,
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  }, [safeOut]);
+
+  const safeToxicityDonut = useMemo(() => {
+    const tox = safeOut?.toxicity ?? 0;
+    return {
+      data: {
+        labels: ["Toxicity", "Non-toxic"],
+        datasets: [
+          {
+            data: [Math.round(tox * 100), Math.max(0, 100 - Math.round(tox * 100))],
+            backgroundColor: ["#ef4444", "#3b82f6"],
+            borderWidth: 0,
+            cutout: "65%",
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  }, [safeOut]);
+
+  const infMlBar = useMemo(() => {
+    const labels = ["malicious", "phishing", "credential_harvest", "benign"];
+    const values = labels.map((l) => Math.round(((infOut?.mlScores?.[l] ?? 0) * 100)));
+    return {
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "ML score (%)",
+            data: values,
+            backgroundColor: "#f59e0b",
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
+          y: {
+            grid: { color: "rgba(255,255,255,0.06)" },
+            ticks: { color: "#9CA3AF" },
+            suggestedMax: 100,
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  }, [infOut]);
+
+  const infHeurBar = useMemo(() => {
+    const h = infOut?.heuristics ?? {};
+    const signals = [
+      { label: "Links", value: Number(h.linkCount ?? 0) },
+      { label: "Emails", value: Number(h.emailCount ?? 0) },
+      { label: "JS Marker", value: h.hasJSMarker ? 1 : 0 },
+      { label: "Macros", value: h.hasMacroWords ? 1 : 0 },
+      { label: "Threat Words", value: h.hasThreatWords ? 1 : 0 },
+      { label: "Money Words", value: h.hasMoneyWords ? 1 : 0 },
+      { label: "Attachment Cue", value: h.hasAttachmentCue ? 1 : 0 },
+    ];
+    return {
+      data: {
+        labels: signals.map((s) => s.label),
+        datasets: [
+          {
+            label: "Heuristic signals",
+            data: signals.map((s) => s.value),
+            backgroundColor: "#10b981",
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
+          y: {
+            grid: { color: "rgba(255,255,255,0.06)" },
+            ticks: { color: "#9CA3AF" },
+            suggestedMax: Math.max(
+              5,
+              signals.reduce((m, s) => Math.max(m, s.value), 0) + 1
+            ),
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  }, [infOut]);
+
+  const infRiskDonut = useMemo(() => {
+    const r = infOut?.riskScore ?? 0;
+    const pct = Math.round(r * 100);
+    return {
+      data: {
+        labels: ["Risk", "Remaining"],
+        datasets: [
+          {
+            data: [pct, Math.max(0, 100 - pct)],
+            backgroundColor: ["#ef4444", "#1f2937"],
+            borderWidth: 0,
+            cutout: "65%",
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  }, [infOut]);
+
+  // Threat Intelligence Charts
+  const threatAnalysisBar = useMemo(() => {
+    const labels = ["malware", "phishing", "ransomware", "apt", "botnet", "exploit", "vulnerability", "benign"];
+    const values = labels.map((l) => (threatOut?.threatScores?.[l] ?? 0) * 100);
+    return {
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Threat Score (%)",
+            data: values,
+            backgroundColor: "#dc2626",
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
+          y: {
+            grid: { color: "rgba(255,255,255,0.06)" },
+            ticks: { color: "#9CA3AF" },
+            suggestedMax: 100,
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  }, [threatOut]);
+
+  const malwareAnalysisBar = useMemo(() => {
+    const labels = ["trojan", "virus", "worm", "rootkit", "backdoor", "spyware", "adware", "clean"];
+    const values = labels.map((l) => (threatOut?.malwareScores?.[l] ?? 0) * 100);
+    return {
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Malware Score (%)",
+            data: values,
+            backgroundColor: "#f59e0b",
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
+          y: {
+            grid: { color: "rgba(255,255,255,0.06)" },
+            ticks: { color: "#9CA3AF" },
+            suggestedMax: 100,
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  }, [threatOut]);
+
+  const networkThreatsBar = useMemo(() => {
+    const labels = ["ddos", "brute_force", "port_scan", "sql_injection", "xss", "man_in_middle", "normal_traffic"];
+    const values = labels.map((l) => (threatOut?.networkScores?.[l] ?? 0) * 100);
+    return {
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Network Threat Score (%)",
+            data: values,
+            backgroundColor: "#8b5cf6",
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
+          y: {
+            grid: { color: "rgba(255,255,255,0.06)" },
+            ticks: { color: "#9CA3AF" },
+            suggestedMax: 100,
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  }, [threatOut]);
+
+  const threatRiskDonut = useMemo(() => {
+    const r = threatOut?.overallRisk ?? 0;
+    const pct = Math.round(r * 100);
+    return {
+      data: {
+        labels: ["Threat Risk", "Safe"],
+        datasets: [
+          {
+            data: [pct, Math.max(0, 100 - pct)],
+            backgroundColor: ["#dc2626", "#1f2937"],
+            borderWidth: 0,
+            cutout: "65%",
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  }, [threatOut]);
+
+  // NEW: Chart configs for the 4 revolutionary features
+  const predictionAnalysisBar = useMemo(() => {
+    const labels = ["ddos_attack", "phishing_campaign", "malware_injection", "data_breach", "insider_threat", "normal_activity"];
+    const values = labels.map((l) => (predictionOut?.predictionScores?.[l] ?? 0) * 100);
+    return {
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Threat Prediction (%)",
+            data: values,
+            backgroundColor: "#dc2626",
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
+          y: {
+            grid: { color: "rgba(255,255,255,0.06)" },
+            ticks: { color: "#9CA3AF" },
+            suggestedMax: 100,
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  }, [predictionOut]);
+
+  const socialEngAnalysisBar = useMemo(() => {
+    const labels = ["phishing", "vishing", "smishing", "pretexting", "baiting", "quid_pro_quo", "tailgating", "legitimate"];
+    const values = labels.map((l) => (socialEngOut?.socialEngScores?.[l] ?? 0) * 100);
+    return {
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Social Engineering Risk (%)",
+            data: values,
+            backgroundColor: "#f59e0b",
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
+          y: {
+            grid: { color: "rgba(255,255,255,0.06)" },
+            ticks: { color: "#9CA3AF" },
+            suggestedMax: 100,
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  }, [socialEngOut]);
+
+  const quantumAnalysisBar = useMemo(() => {
+    const labels = ["quantum_vulnerable", "quantum_safe", "hybrid_approach", "post_quantum_ready", "immediate_action_needed"];
+    const values = labels.map((l) => (quantumOut?.quantumScores?.[l] ?? 0) * 100);
+    return {
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Quantum Security Status (%)",
+            data: values,
+            backgroundColor: "#8b5cf6",
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
+          y: {
+            grid: { color: "rgba(255,255,255,0.06)" },
+            ticks: { color: "#9CA3AF" },
+            suggestedMax: 100,
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  }, [quantumOut]);
+
+  const incidentResponseBar = useMemo(() => {
+    const labels = ["auto_isolate", "escalate_human", "auto_remediate", "monitor_only", "emergency_shutdown", "normal_operation"];
+    const values = labels.map((l) => (incidentOut?.incidentScores?.[l] ?? 0) * 100);
+    return {
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Incident Response Action (%)",
+            data: values,
+            backgroundColor: "#10b981",
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
+          y: {
+            grid: { color: "rgba(255,255,255,0.06)" },
+            ticks: { color: "#9CA3AF" },
+            suggestedMax: 100,
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  }, [incidentOut]);
 
   const phishingGauge = useMemo(
     () => ({
@@ -404,6 +1265,733 @@ export default function Page() {
     },
   };
 
+  /** ---------- SAFE SPEECH ACTION (debounced realtime + calibrated) ---------- **/
+  async function analyzeSafeSpeech(input: string, signal?: AbortSignal) {
+    const text = clampText(input, 8000);
+    const wc = wordCount(text);
+
+    // super-short messages are benign unless hard evidence
+    const kw = simpleKeywordExplain(text);
+    const hasURL = containsURL(text);
+    if (wc < 4 && kw.length === 0 && !hasURL) {
+      return {
+        verdict: "LIKELY BENIGN",
+        manipulativeScore: 0,
+        tacticScores: { urgent: 0, "fear-based": 0, reward: 0, threat: 0, benign: 0.95 },
+        toxicity: 0,
+        keywords: [],
+        benignScore: 0.95,
+        confidence: 0.85,
+      };
+    }
+
+    // Two-pass ZS: tactics + intent
+    const tacticLabels = ["urgent", "fear-based", "reward", "threat", "benign"];
+    const intentLabels = ["business", "support", "greeting", "personal", "spam", "phishing"];
+
+    const [tacticsZS, intentZS, toxRaw] = await Promise.all([
+      hfZeroShot(text, tacticLabels, true, signal),
+      hfZeroShot(text, intentLabels, true, signal),
+      hfToxic(text, signal),
+    ]);
+
+    const tacticScores = mapScores(tacticsZS.labels, tacticsZS.scores, tacticLabels);
+    const benignScore = tacticScores["benign"] ?? 0;
+
+    // Toxicity normalization
+    let toxicity = 0;
+    const flat = Array.isArray(toxRaw) ? toxRaw.flat() : [toxRaw];
+    const toxSum = flat
+      .filter((e: any) => e && e.label && !/non[- ]?toxic/i.test(e.label))
+      .reduce((a: number, b: any) => a + (b.score || 0), 0);
+    toxicity = Number(Math.max(0, Math.min(1, toxSum)).toFixed(4));
+
+    const manipulativeScore = Number(
+      Math.max(
+        tacticScores["urgent"] ?? 0,
+        tacticScores["fear-based"] ?? 0,
+        tacticScores["reward"] ?? 0,
+        tacticScores["threat"] ?? 0
+      ).toFixed(4)
+    );
+
+    // Intent checks to suppress false positives
+    const intentScores = mapScores(intentZS.labels, intentZS.scores, intentLabels);
+    const likelyBusiness = (intentScores["business"] ?? 0) > 0.55 || (intentScores["support"] ?? 0) > 0.55;
+    const likelyGreeting = (intentScores["greeting"] ?? 0) > 0.6;
+
+    // Rule-of-thumb fusion (top-notch calibration)
+    // Risk triggers only if:
+    // - manipulative high & benign low OR toxicity moderate+ AND risky keywords/URLs present
+    const riskSignal =
+      (manipulativeScore > 0.72 && benignScore < 0.45) ||
+      ((toxicity > 0.45 || (kw.length >= 1 && hasURL)) && benignScore < 0.55);
+
+    // Suppression for greetings / business context when short
+    const suppress =
+      likelyGreeting && wc <= 12 && kw.length === 0 && !hasURL
+        ? true
+        : likelyBusiness && wc <= 10 && kw.length <= 1 && toxicity < 0.25;
+
+    let verdict = "LIKELY BENIGN";
+    if (!suppress && riskSignal) {
+      verdict = "MANIPULATIVE / TOXIC";
+    }
+
+    // Confidence: spread between benign vs max manipulative + toxicity weight
+    const spread = Math.abs(benignScore - manipulativeScore);
+    const conf = Math.max(0.5, Math.min(0.98, 0.5 + spread * 0.5 + toxicity * 0.15));
+
+    return {
+      verdict,
+      manipulativeScore,
+      tacticScores,
+      toxicity,
+      keywords: kw,
+      benignScore,
+      confidence: Number(conf.toFixed(3)),
+    };
+  }
+
+  // public trigger (button)
+  async function runSafeSpeech() {
+    try {
+      setSafeErr(null);
+      setSafeOut(null);
+      const input = safeText.trim();
+      if (!input) {
+        setSafeErr("Enter text to analyze.");
+        return;
+      }
+      setSafeLoading(true);
+      // cancel previous
+      safeAbort.current?.abort();
+      const controller = new AbortController();
+      safeAbort.current = controller;
+      const res = await analyzeSafeSpeech(input, controller.signal);
+      setSafeOut(res);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setSafeErr(e?.message || "Failed to analyze.");
+    } finally {
+      setSafeLoading(false);
+    }
+  }
+
+  // realtime: debounce on typing
+  useEffect(() => {
+    if (!safeText.trim()) {
+      setSafeOut(null);
+      setSafeErr(null);
+      return;
+    }
+    clearTimeout(safeTypingTimer.current);
+    safeTypingTimer.current = setTimeout(async () => {
+      try {
+        setSafeErr(null);
+        setSafeLoading(true);
+        safeAbort.current?.abort();
+        const controller = new AbortController();
+        safeAbort.current = controller;
+        const res = await analyzeSafeSpeech(safeText, controller.signal);
+        setSafeOut(res);
+      } catch (e: any) {
+        if (e?.name !== "AbortError") setSafeErr(e?.message || "Analyze error.");
+      } finally {
+        setSafeLoading(false);
+      }
+    }, 450); // snappy but not spammy
+    return () => clearTimeout(safeTypingTimer.current);
+  }, [safeText]);
+
+  /** ---------- THREAT INTELLIGENCE ACTION (real-time analysis) ---------- **/
+  async function analyzeThreatIntelligenceRealtime(input: string, signal?: AbortSignal) {
+    const text = clampText(input, 6000);
+    
+    if (!text.trim()) {
+      return {
+        threatScores: {},
+        malwareScores: {},
+        networkScores: {},
+        overallRisk: 0,
+        topThreats: [],
+        confidence: 0,
+      };
+    }
+
+    try {
+      const [threatScores, malwareScores, networkScores] = await Promise.all([
+        analyzeThreatIntelligence(text, signal),
+        analyzeMalwareIndicators(text, signal),
+        analyzeNetworkThreats(text, signal),
+      ]);
+
+      // Calculate overall risk
+      const threatMax = Math.max(...Object.values(threatScores).filter(v => v > 0));
+      const malwareMax = Math.max(...Object.values(malwareScores).filter(v => v > 0));
+      const networkMax = Math.max(...Object.values(networkScores).filter(v => v > 0));
+      
+      const overallRisk = Math.max(threatMax, malwareMax, networkMax);
+
+      // Get top threats
+      const allScores = { ...threatScores, ...malwareScores, ...networkScores };
+      const topThreats = Object.entries(allScores)
+        .filter(([_, score]) => score > 0.3)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3)
+        .map(([threat, _]) => threat);
+
+      // Calculate confidence
+      const confidence = Math.min(0.95, 0.5 + overallRisk * 0.3 + (topThreats.length * 0.1));
+
+      return {
+        threatScores,
+        malwareScores,
+        networkScores,
+        overallRisk,
+        topThreats,
+        confidence: Number(confidence.toFixed(3)),
+      };
+    } catch (error) {
+      console.error("Threat intelligence analysis error:", error);
+      throw error;
+    }
+  }
+
+  // Public trigger for threat analysis
+  async function runThreatAnalysis() {
+    try {
+      setThreatErr(null);
+      setThreatOut(null);
+      const input = threatText.trim();
+      if (!input) {
+        setThreatErr("Enter threat intelligence data to analyze.");
+        return;
+      }
+      setThreatLoading(true);
+      threatAbort.current?.abort();
+      const controller = new AbortController();
+      threatAbort.current = controller;
+      const res = await analyzeThreatIntelligenceRealtime(input, controller.signal);
+      setThreatOut(res);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setThreatErr(e?.message || "Failed to analyze threat intelligence.");
+    } finally {
+      setThreatLoading(false);
+    }
+  }
+
+  // Real-time threat analysis on typing
+  useEffect(() => {
+    if (!threatText.trim()) {
+      setThreatOut(null);
+      setThreatErr(null);
+      return;
+    }
+    clearTimeout(threatTypingTimer.current);
+    threatTypingTimer.current = setTimeout(async () => {
+      try {
+        setThreatErr(null);
+        setThreatLoading(true);
+        threatAbort.current?.abort();
+        const controller = new AbortController();
+        threatAbort.current = controller;
+        const res = await analyzeThreatIntelligenceRealtime(threatText, controller.signal);
+        setThreatOut(res);
+      } catch (e: any) {
+        if (e?.name !== "AbortError") setThreatErr(e?.message || "Threat analysis error.");
+      } finally {
+        setThreatLoading(false);
+      }
+    }, 500);
+    return () => clearTimeout(threatTypingTimer.current);
+  }, [threatText]);
+
+  /** ---------- NEW: AI-POWERED CYBER THREAT PREDICTION ENGINE ---------- **/
+  async function analyzeThreatPredictionRealtime(networkData: string, userBehavior: string, signal?: AbortSignal) {
+    const networkText = clampText(networkData, 3000);
+    const behaviorText = clampText(userBehavior, 3000);
+    
+    if (!networkText.trim() && !behaviorText.trim()) {
+      return {
+        predictionScores: {},
+        topThreats: [],
+        riskLevel: 0,
+        recommendations: [],
+        confidence: 0,
+      };
+    }
+
+    try {
+      const predictionScores = await analyzeThreatPrediction(networkText, behaviorText, signal);
+      
+      // Calculate risk level
+      const riskLevel = Math.max(...Object.values(predictionScores).filter(v => v > 0));
+      
+      // Get top threats
+      const topThreats = Object.entries(predictionScores)
+        .filter(([_, score]) => score > 0.3)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3)
+        .map(([threat, _]) => threat);
+
+      // Generate recommendations
+      const recommendations = [
+        "Implement network segmentation",
+        "Deploy advanced threat detection",
+        "Enhance user behavior monitoring",
+        "Update security policies",
+        "Conduct security awareness training"
+      ].slice(0, Math.min(3, topThreats.length + 1));
+
+      // Calculate confidence
+      const confidence = Math.min(0.95, 0.5 + riskLevel * 0.3 + (topThreats.length * 0.1));
+
+      return {
+        predictionScores,
+        topThreats,
+        riskLevel,
+        recommendations,
+        confidence: Number(confidence.toFixed(3)),
+      };
+    } catch (error) {
+      console.error("Threat prediction analysis error:", error);
+      throw error;
+    }
+  }
+
+  // Public trigger for threat prediction
+  async function runThreatPrediction() {
+    try {
+      setPredictionErr(null);
+      setPredictionOut(null);
+      const networkInput = predictionNetworkData.trim();
+      const behaviorInput = predictionUserBehavior.trim();
+      if (!networkInput && !behaviorInput) {
+        setPredictionErr("Enter network data or user behavior to analyze.");
+        return;
+      }
+      setPredictionLoading(true);
+      predictionAbort.current?.abort();
+      const controller = new AbortController();
+      predictionAbort.current = controller;
+      const res = await analyzeThreatPredictionRealtime(networkInput, behaviorInput, controller.signal);
+      setPredictionOut(res);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setPredictionErr(e?.message || "Failed to analyze threat prediction.");
+    } finally {
+      setPredictionLoading(false);
+    }
+  }
+
+  // Real-time threat prediction on typing
+  useEffect(() => {
+    if (!predictionNetworkData.trim() && !predictionUserBehavior.trim()) {
+      setPredictionOut(null);
+      setPredictionErr(null);
+      return;
+    }
+    clearTimeout(predictionTypingTimer.current);
+    predictionTypingTimer.current = setTimeout(async () => {
+      try {
+        setPredictionErr(null);
+        setPredictionLoading(true);
+        predictionAbort.current?.abort();
+        const controller = new AbortController();
+        predictionAbort.current = controller;
+        const res = await analyzeThreatPredictionRealtime(predictionNetworkData, predictionUserBehavior, controller.signal);
+        setPredictionOut(res);
+      } catch (e: any) {
+        if (e?.name !== "AbortError") setPredictionErr(e?.message || "Threat prediction error.");
+      } finally {
+        setPredictionLoading(false);
+      }
+    }, 600);
+    return () => clearTimeout(predictionTypingTimer.current);
+  }, [predictionNetworkData, predictionUserBehavior]);
+
+  /** ---------- NEW: AI-POWERED SOCIAL ENGINEERING DEFENSE ---------- **/
+  async function analyzeSocialEngineeringRealtime(input: string, signal?: AbortSignal) {
+    const text = clampText(input, 6000);
+    
+    if (!text.trim()) {
+      return {
+        socialEngScores: {},
+        attackType: "Unknown",
+        riskLevel: 0,
+        defenseRecommendations: [],
+        confidence: 0,
+      };
+    }
+
+    try {
+      const socialEngScores = await analyzeSocialEngineering(text, signal);
+      
+      // Determine attack type
+      const attackType = Object.entries(socialEngScores)
+        .filter(([_, score]) => score > 0.3)
+        .sort(([, a], [, b]) => b - a)[0]?.[0] || "legitimate";
+      
+      // Calculate risk level
+      const riskLevel = Math.max(...Object.values(socialEngScores).filter(v => v > 0));
+      
+      // Generate defense recommendations
+      const defenseRecommendations = [
+        "Verify sender identity through alternative channels",
+        "Never click suspicious links or download attachments",
+        "Report suspicious communications to security team",
+        "Enable multi-factor authentication",
+        "Conduct security awareness training"
+      ].slice(0, Math.min(3, Object.keys(socialEngScores).filter(k => socialEngScores[k] > 0.3).length + 1));
+
+      // Calculate confidence
+      const confidence = Math.min(0.95, 0.5 + riskLevel * 0.3 + (attackType !== "legitimate" ? 0.2 : 0));
+
+      return {
+        socialEngScores,
+        attackType,
+        riskLevel,
+        defenseRecommendations,
+        confidence: Number(confidence.toFixed(3)),
+      };
+    } catch (error) {
+      console.error("Social engineering analysis error:", error);
+      throw error;
+    }
+  }
+
+  // Public trigger for social engineering analysis
+  async function runSocialEngineeringAnalysis() {
+    try {
+      setSocialEngErr(null);
+      setSocialEngOut(null);
+      const input = socialEngText.trim();
+      if (!input) {
+        setSocialEngErr("Enter communication content to analyze.");
+        return;
+      }
+      setSocialEngLoading(true);
+      socialEngAbort.current?.abort();
+      const controller = new AbortController();
+      socialEngAbort.current = controller;
+      const res = await analyzeSocialEngineeringRealtime(input, controller.signal);
+      setSocialEngOut(res);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setSocialEngErr(e?.message || "Failed to analyze social engineering.");
+    } finally {
+      setSocialEngLoading(false);
+    }
+  }
+
+  // Real-time social engineering analysis on typing
+  useEffect(() => {
+    if (!socialEngText.trim()) {
+      setSocialEngOut(null);
+      setSocialEngErr(null);
+      return;
+    }
+    clearTimeout(socialEngTypingTimer.current);
+    socialEngTypingTimer.current = setTimeout(async () => {
+      try {
+        setSocialEngErr(null);
+        setSocialEngLoading(true);
+        socialEngAbort.current?.abort();
+        const controller = new AbortController();
+        socialEngAbort.current = controller;
+        const res = await analyzeSocialEngineeringRealtime(socialEngText, controller.signal);
+        setSocialEngOut(res);
+      } catch (e: any) {
+        if (e?.name !== "AbortError") setSocialEngErr(e?.message || "Social engineering analysis error.");
+      } finally {
+        setSocialEngLoading(false);
+      }
+    }, 500);
+    return () => clearTimeout(socialEngTypingTimer.current);
+  }, [socialEngText]);
+
+  /** ---------- NEW: QUANTUM-SAFE ENCRYPTION ADVISOR ---------- **/
+  async function analyzeQuantumThreatsRealtime(input: string, signal?: AbortSignal) {
+    const text = clampText(input, 6000);
+    
+    if (!text.trim()) {
+      return {
+        quantumScores: {},
+        vulnerabilityLevel: 0,
+        recommendations: [],
+        migrationPlan: [],
+        confidence: 0,
+      };
+    }
+
+    try {
+      const quantumScores = await analyzeQuantumThreats(text, signal);
+      
+      // Calculate vulnerability level
+      const vulnerabilityLevel = Math.max(...Object.values(quantumScores).filter(v => v > 0));
+      
+      // Generate recommendations
+      const recommendations = [
+        "Implement post-quantum cryptography algorithms",
+        "Deploy hybrid encryption solutions",
+        "Update cryptographic libraries",
+        "Conduct quantum readiness assessment",
+        "Plan migration timeline"
+      ].slice(0, Math.min(3, Object.keys(quantumScores).filter(k => quantumScores[k] > 0.3).length + 1));
+
+      // Generate migration plan
+      const migrationPlan = [
+        "Phase 1: Assess current encryption standards",
+        "Phase 2: Implement hybrid solutions",
+        "Phase 3: Deploy post-quantum algorithms",
+        "Phase 4: Monitor and optimize"
+      ];
+
+      // Calculate confidence
+      const confidence = Math.min(0.95, 0.5 + vulnerabilityLevel * 0.3 + (vulnerabilityLevel > 0.5 ? 0.2 : 0));
+
+      return {
+        quantumScores,
+        vulnerabilityLevel,
+        recommendations,
+        migrationPlan,
+        confidence: Number(confidence.toFixed(3)),
+      };
+    } catch (error) {
+      console.error("Quantum analysis error:", error);
+      throw error;
+    }
+  }
+
+  // Public trigger for quantum analysis
+  async function runQuantumAnalysis() {
+    try {
+      setQuantumErr(null);
+      setQuantumOut(null);
+      const input = quantumEncryptionData.trim();
+      if (!input) {
+        setQuantumErr("Enter encryption data to analyze.");
+        return;
+      }
+      setQuantumLoading(true);
+      quantumAbort.current?.abort();
+      const controller = new AbortController();
+      quantumAbort.current = controller;
+      const res = await analyzeQuantumThreatsRealtime(input, controller.signal);
+      setQuantumOut(res);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setQuantumErr(e?.message || "Failed to analyze quantum threats.");
+    } finally {
+      setQuantumLoading(false);
+    }
+  }
+
+  // Real-time quantum analysis on typing
+  useEffect(() => {
+    if (!quantumEncryptionData.trim()) {
+      setQuantumOut(null);
+      setQuantumErr(null);
+      return;
+    }
+    clearTimeout(quantumTypingTimer.current);
+    quantumTypingTimer.current = setTimeout(async () => {
+      try {
+        setQuantumErr(null);
+        setQuantumLoading(true);
+        quantumAbort.current?.abort();
+        const controller = new AbortController();
+        quantumAbort.current = controller;
+        const res = await analyzeQuantumThreatsRealtime(quantumEncryptionData, controller.signal);
+        setQuantumOut(res);
+      } catch (e: any) {
+        if (e?.name !== "AbortError") setQuantumErr(e?.message || "Quantum analysis error.");
+      } finally {
+        setQuantumLoading(false);
+      }
+    }, 500);
+    return () => clearTimeout(quantumTypingTimer.current);
+  }, [quantumEncryptionData]);
+
+  /** ---------- NEW: AI-POWERED INCIDENT RESPONSE ORCHESTRATOR ---------- **/
+  async function analyzeIncidentResponseRealtime(input: string, signal?: AbortSignal) {
+    const text = clampText(input, 6000);
+    
+    if (!text.trim()) {
+      return {
+        incidentScores: {},
+        responseAction: "Monitor",
+        severity: 0,
+        automatedActions: [],
+        confidence: 0,
+      };
+    }
+
+    try {
+      const incidentScores = await analyzeIncidentResponse(text, signal);
+      
+      // Determine response action
+      const responseAction = Object.entries(incidentScores)
+        .filter(([_, score]) => score > 0.3)
+        .sort(([, a], [, b]) => b - a)[0]?.[0] || "normal_operation";
+      
+      // Calculate severity
+      const severity = Math.max(...Object.values(incidentScores).filter(v => v > 0));
+      
+      // Generate automated actions
+      const automatedActions = [
+        "Isolate affected systems",
+        "Block malicious IP addresses",
+        "Deploy emergency patches",
+        "Notify security team",
+        "Activate incident response plan"
+      ].slice(0, Math.min(3, Object.keys(incidentScores).filter(k => incidentScores[k] > 0.3).length + 1));
+
+      // Calculate confidence
+      const confidence = Math.min(0.95, 0.5 + severity * 0.3 + (responseAction !== "normal_operation" ? 0.2 : 0));
+
+      return {
+        incidentScores,
+        responseAction,
+        severity,
+        automatedActions,
+        confidence: Number(confidence.toFixed(3)),
+      };
+    } catch (error) {
+      console.error("Incident response analysis error:", error);
+      throw error;
+    }
+  }
+
+  // Public trigger for incident response analysis
+  async function runIncidentResponseAnalysis() {
+    try {
+      setIncidentErr(null);
+      setIncidentOut(null);
+      const input = incidentData.trim();
+      if (!input) {
+        setIncidentErr("Enter incident data to analyze.");
+        return;
+      }
+      setIncidentLoading(true);
+      incidentAbort.current?.abort();
+      const controller = new AbortController();
+      incidentAbort.current = controller;
+      const res = await analyzeIncidentResponseRealtime(input, controller.signal);
+      setIncidentOut(res);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setIncidentErr(e?.message || "Failed to analyze incident response.");
+    } finally {
+      setIncidentLoading(false);
+    }
+  }
+
+  // Real-time incident response analysis on typing
+  useEffect(() => {
+    if (!incidentData.trim()) {
+      setIncidentOut(null);
+      setIncidentErr(null);
+      return;
+    }
+    clearTimeout(incidentTypingTimer.current);
+    incidentTypingTimer.current = setTimeout(async () => {
+      try {
+        setIncidentErr(null);
+        setIncidentLoading(true);
+        incidentAbort.current?.abort();
+        const controller = new AbortController();
+        incidentAbort.current = controller;
+        const res = await analyzeIncidentResponseRealtime(incidentData, controller.signal);
+        setIncidentOut(res);
+      } catch (e: any) {
+        if (e?.name !== "AbortError") setIncidentErr(e?.message || "Incident response analysis error.");
+      } finally {
+        setIncidentLoading(false);
+      }
+    }, 500);
+    return () => clearTimeout(incidentTypingTimer.current);
+  }, [incidentData]);
+
+  /** ---------- INFER SECURE ACTION (calibrated + guardrails) ---------- **/
+  async function runInferSecure() {
+    try {
+      setInfErr(null);
+      setInfOut(null);
+      if (!infFile) {
+        setInfErr("Choose a .txt file (for this demo).");
+        return;
+      }
+      if (!/\.txt$/i.test(infFile.name)) {
+        setInfErr("This page demo supports .txt. (PDF/DOCX need extra deps.)");
+        return;
+      }
+      setInfLoading(true);
+
+      const raw = await infFile.text();
+      const text = clampText(raw, 7000);
+      const heur = fileHeuristics(text, infFile);
+
+      // stronger labels, include benign to anchor
+      const labels = ["malicious", "phishing", "credential_harvest", "scam", "spam", "benign"];
+      const summary = [
+        `File: ${heur.name} (${Math.max(1, Math.round(heur.sizeBytes / 1024))} KB)`,
+        `Heuristics: links=${heur.linkCount}, emails=${heur.emailCount}, js=${heur.hasJSMarker}, macros=${heur.hasMacroWords}, threat=${heur.hasThreatWords}, money=${heur.hasMoneyWords}, attach=${heur.hasAttachmentCue}`,
+        `Snippet: ${text.slice(0, 900)}`,
+      ].join("\n");
+
+      const zs = await hfZeroShot(summary, labels, true);
+      const mlScores = mapScores(zs.labels, zs.scores, labels);
+
+      // ML risk from union of malicious intents
+      const unionRisk = Math.max(
+        mlScores["malicious"] ?? 0,
+        mlScores["phishing"] ?? 0,
+        mlScores["credential_harvest"] ?? 0,
+        mlScores["scam"] ?? 0,
+        mlScores["spam"] ?? 0
+      );
+
+      // Blend with heuristics; require agreement or strong ML to spike
+      let riskScore = 0.55 * unionRisk + 0.45 * heur.heuristicRisk;
+      const benignAnchor = mlScores["benign"] ?? 0;
+      if (benignAnchor > 0.6 && unionRisk < 0.5 && heur.heuristicRisk < 0.5) {
+        riskScore *= 0.65;
+      }
+      // demand at least two red flags for HIGH
+      const signals =
+        (heur.linkCount > 2 ? 1 : 0) +
+        (heur.hasThreatWords ? 1 : 0) +
+        (heur.hasMoneyWords ? 1 : 0) +
+        (heur.hasJSMarker ? 1 : 0) +
+        (heur.hasMacroWords ? 1 : 0) +
+        (heur.hasAttachmentCue ? 1 : 0) +
+        (unionRisk > 0.7 ? 1 : 0);
+      if (riskScore > 0.75 && signals < 2) riskScore = 0.7; // cap over-eager highs
+
+      riskScore = Number(Math.max(0, Math.min(1, riskScore)).toFixed(3));
+
+      // confidence from agreement & signal count
+      const confBase = 0.5 + Math.abs(unionRisk - benignAnchor) * 0.35 + Math.min(0.3, signals * 0.05);
+      const confidence = Number(Math.min(0.98, confBase).toFixed(3));
+
+      setInfOut({
+        verdict: verdictFrom(riskScore),
+        riskScore,
+        mlScores,
+        heuristics: heur,
+        confidence,
+      });
+    } catch (e: any) {
+      setInfErr(e?.message || "Failed to scan.");
+    } finally {
+      setInfLoading(false);
+    }
+  }
+
+  /** ---------- UI ---------- **/
   return (
     <div className="min-h-screen w-full bg-[#09080b] text-white">
       <div className="sticky top-0 z-40 border-b border-white/10 bg-black/40 backdrop-blur supports-[backdrop-filter]:bg-black/80">
@@ -437,10 +2025,26 @@ export default function Page() {
                 <Bell size={20} />
               </button>
               <button
-                onClick={() => exportDashboardSummary("Your_Dashboard_Report.pdf")}
+                 onClick={() => exportDashboardSummary("Your_Dashboard_Report.pdf", {
+                   safeSpeech: safeOut,
+                   inferSecure: infOut,
+                   threatIntelligence: threatOut,
+                   threatPrediction: predictionOut,
+                   socialEngineering: socialEngOut,
+                   quantumAdvisor: quantumOut,
+                   incidentResponse: incidentOut,
+                   phishingScore: phishingScore,
+                   vendorData: [
+                     { name: "Acme Corp", risk: 85, breaches: 2, vulns: 8, intel: 4 },
+                     { name: "Global Insights", risk: 63, breaches: 0, vulns: 8, intel: 8 },
+                     { name: "Tech Innovations", risk: 59, breaches: 1, vulns: 10, intel: 10 },
+                     { name: "SecureSoft", risk: 41, breaches: 1, vulns: 5, intel: 6 },
+                     { name: "DataLogic", risk: 52, breaches: 4, vulns: 8, intel: 1 }
+                   ]
+                 })}
                 className="ml-2 inline-flex items-center gap-2 rounded-xl bg-white/5 p-2 text-xs md:text-sm hover:bg-white/10"
                 aria-label="Generate dashboard report"
-                title="Generate a printable report of all sections"
+                title="Generate a printable report of all sections with current analysis data"
               >
                 <svg
                   className="h-5 w-5"
@@ -462,12 +2066,8 @@ export default function Page() {
                     Notifications
                   </div>
                   <div className="divide-y divide-white/10 text-xs text-white/80">
-                    <div className="p-2 hover:bg-white/5">
-                      ✅ Deployment succeeded — v0.8.3 live.
-                    </div>
-                    <div className="p-2 hover:bg-white/5">
-                      🔒 New login detected from Hyderabad.
-                    </div>
+                    <div className="p-2 hover:bg-white/5">✅ Deployment succeeded — v0.8.4 live.</div>
+                    <div className="p-2 hover:bg-white/5">🔒 New login detected from Hyderabad.</div>
                   </div>
                 </div>
               )}
@@ -544,8 +2144,8 @@ export default function Page() {
                 ),
               },
               {
-                label: "Safe Speech",
-                link: "#safespeech",
+                label: "Threat Intel",
+                link: "#threatintel",
                 icon: (
                   <svg
                     className="h-5 w-5 text-white/60 flex-shrink-0"
@@ -556,12 +2156,90 @@ export default function Page() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    <path d="M9 10h6" />
-                    <path d="M9 14h2" />
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 17l10 5 10-5" />
+                    <path d="M2 12l10 5 10-5" />
                   </svg>
                 ),
-              },              
+              },
+               {
+                 label: "Threat Prediction",
+                 link: "#threatprediction",
+                 icon: (
+                   <svg
+                     className="h-5 w-5 text-white/60 flex-shrink-0"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     strokeWidth="1.6"
+                     strokeLinecap="round"
+                     strokeLinejoin="round"
+                   >
+                     <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                     <path d="M2 17l10 5 10-5" />
+                     <path d="M2 12l10 5 10-5" />
+                     <circle cx="12" cy="12" r="3" />
+                   </svg>
+                 ),
+               },
+               {
+                 label: "Social Defense",
+                 link: "#socialdefense",
+                 icon: (
+                   <svg
+                     className="h-5 w-5 text-white/60 flex-shrink-0"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     strokeWidth="1.6"
+                     strokeLinecap="round"
+                     strokeLinejoin="round"
+                   >
+                     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                     <circle cx="9" cy="7" r="4" />
+                     <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                     <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                   </svg>
+                 ),
+               },
+               {
+                 label: "Quantum Advisor",
+                 link: "#quantumadvisor",
+                 icon: (
+                   <svg
+                     className="h-5 w-5 text-white/60 flex-shrink-0"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     strokeWidth="1.6"
+                     strokeLinecap="round"
+                     strokeLinejoin="round"
+                   >
+                     <circle cx="12" cy="12" r="10" />
+                     <path d="M12 6v6l4 2" />
+                     <path d="M16 4l4 4-4 4" />
+                     <path d="M8 4l-4 4 4 4" />
+                   </svg>
+                 ),
+               },
+               {
+                 label: "Incident Response",
+                 link: "#incidentresponse",
+                 icon: (
+                   <svg
+                     className="h-5 w-5 text-white/60 flex-shrink-0"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     strokeWidth="1.6"
+                     strokeLinecap="round"
+                     strokeLinejoin="round"
+                   >
+                     <path d="M12 9v4m0 4h.01M5 12a7 7 0 1 0 14 0 7 7 0 0 0-14 0z" />
+                     <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                  </svg>
+                ),
+              },
               {
                 label: "Infer Secure",
                 link: "#infersecure",
@@ -582,7 +2260,7 @@ export default function Page() {
                     <path d="M12 3a9 9 0 0 1 9 9c0 3.9-2.5 7.3-6 8.5" />
                   </svg>
                 ),
-              }
+              },
             ].map((i, idx) => (
               <Link
                 key={idx}
@@ -628,34 +2306,22 @@ export default function Page() {
                     />
                     <span className="text-sm font-semibold">Z3RO</span>
                   </Link>
-                  <button
-                    onClick={() => setOpen(false)}
-                    className="rounded-xl p-2 hover:bg-white/5"
-                  >
+                  <button onClick={() => setOpen(false)} className="rounded-xl p-2 hover:bg-white/5">
                     <Icon path="M6 18L18 6M6 6l12 12" />
                   </button>
                 </div>
                 <div className="flex flex-col gap-2 mb-20">
-                  {[
-                    { label: "Overview", icon: "M3 12h18M12 3v18", link: "#overview" },
-                    {
-                      label: "Phishing",
-                      icon: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M9 12h6",
-                      link: "#phishing",
-                    },
-                    {
-                      label: "Vendors",
-                      icon: "M3 7h18M3 12h18M3 17h18",
-                      link: "#vendors",
-                    },
-                    { label: "Compliance", icon: "M5 13l4 4L19 7", link: "#compliance" },
-                    {
-                      label: "Incidents",
-                      icon:
-                        "M12 9v4m0 4h.01M5 12a7 7 0 1 0 14 0 7 7 0 0 0-14 0z",
-                      link: "#incidents",
-                    },
-                  ].map((i, idx) => (
+                   {[
+                     { label: "Overview", icon: "M3 12h18M12 3v18", link: "#overview" },
+                     { label: "Phishing", icon: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M9 12h6", link: "#phishing" },
+                     { label: "Vendors", icon: "M3 7h18M3 12h18M3 17h18", link: "#vendors" },
+                     { label: "Threat Intel", icon: "M12 2L2 7l10 5 10-5-10-5z M2 17l10 5 10-5 M2 12l10 5 10-5", link: "#threatintel" },
+                     { label: "Threat Prediction", icon: "M12 2L2 7l10 5 10-5-10-5z M2 17l10 5 10-5 M2 12l10 5 10-5 M12 12a3 3 0 1 1 0-6 3 3 0 0 1 0 6z", link: "#threatprediction" },
+                     { label: "Social Defense", icon: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 1 0 8 4 4 0 0 1 0-8z M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75", link: "#socialdefense" },
+                     { label: "Quantum Advisor", icon: "M12 12a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 6v6l4 2 M16 4l4 4-4 4 M8 4l-4 4 4 4", link: "#quantumadvisor" },
+                     { label: "Incident Response", icon: "M12 9v4m0 4h.01M5 12a7 7 0 1 0 14 0 7 7 0 0 0-14 0z M12 2L2 7l10 5 10-5-10-5z", link: "#incidentresponse" },
+                     { label: "Infer Secure", icon: "M9 12a3 3 0 1 1 6 0v1 M9 13h6v5 M12 17v1 M12 3a9 9 0 0 0-9 9c0 3.9 2.5 7.3 6 8.5 M12 3a9 9 0 0 1 9 9c0 3.9-2.5 7.3-6 8.5", link: "#infersecure" },
+                   ].map((i, idx) => (
                     <Link
                       key={idx}
                       href={i.link}
@@ -666,40 +2332,37 @@ export default function Page() {
                     </Link>
                   ))}
                 </div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
                 <div className="flex flex-col gap-1 mb-5">
-                <button
-                  className="mt-2 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
-                >
-                  <BellDot className="h-5 w-5" size={10}/>
-                  Notifications
-                </button>
-                <button
-                  onClick={() => exportDashboardSummary("Zero_Dashboard_Report.pdf")}
-                  className="mt-2 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
-                >
-                  <Icon
-                    className="h-5 w-5"
-                    path="M6 9V3h9l3 3v3M6 18h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2z M14 18v3H6v-3"
-                  />
-                  Generate Report
-                </button>
+                  <button className="mt-2 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10">
+                    <BellDot className="h-5 w-5" size={10} />
+                    Notifications
+                  </button>
+                  <button
+                     onClick={() => exportDashboardSummary("Zero_Dashboard_Report.pdf", {
+                       safeSpeech: safeOut,
+                       inferSecure: infOut,
+                       threatIntelligence: threatOut,
+                       threatPrediction: predictionOut,
+                       socialEngineering: socialEngOut,
+                       quantumAdvisor: quantumOut,
+                       incidentResponse: incidentOut,
+                       phishingScore: phishingScore,
+                       vendorData: [
+                         { name: "Acme Corp", risk: 85, breaches: 2, vulns: 8, intel: 4 },
+                         { name: "Global Insights", risk: 63, breaches: 0, vulns: 8, intel: 8 },
+                         { name: "Tech Innovations", risk: 59, breaches: 1, vulns: 10, intel: 10 },
+                         { name: "SecureSoft", risk: 41, breaches: 1, vulns: 5, intel: 6 },
+                         { name: "DataLogic", risk: 52, breaches: 4, vulns: 8, intel: 1 }
+                       ]
+                     })}
+                    className="mt-2 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+                  >
+                    <Icon
+                      className="h-5 w-5"
+                      path="M6 9V3h9l3 3v3M6 18h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H6a 2 2 0 0 0-2 2v7a2 2 0 0 0 2 2z M14 18v3H6v-3"
+                    />
+                    Generate Report
+                  </button>
                 </div>
               </motion.aside>
             </motion.div>
@@ -707,10 +2370,7 @@ export default function Page() {
         </AnimatePresence>
 
         {/* Main */}
-        <main
-          className="min-h-[calc(100vh-56px)] bg-[#09080b] to-transparent p-1 xl:p-3"
-          id="phishing"
-        >
+        <main className="min-h-[calc(100vh-56px)] bg-[#09080b] to-transparent p-1 xl:p-3" id="phishing">
           <div className="grid grid-cols-1 gap-6">
             {/* Row 1: AI-Driven Phishing Detection */}
             <section
@@ -787,24 +2447,9 @@ export default function Page() {
                       </thead>
                       <tbody className="divide-y divide-white/10">
                         {[
-                          {
-                            url: "hxtp://exarnple.com/login",
-                            issue: "Impersonation",
-                            risk: "High",
-                            color: "red",
-                          },
-                          {
-                            url: "hxxps://secure.example.net/",
-                            issue: "Deceptive Link",
-                            risk: "Medium",
-                            color: "amber",
-                          },
-                          {
-                            url: "hxxp://billing.exarnple.co",
-                            issue: "Typosquatting",
-                            risk: "High",
-                            color: "red",
-                          },
+                          { url: "hxtp://exarnple.com/login", issue: "Impersonation", risk: "High", color: "red" },
+                          { url: "hxxps://secure.example.net/", issue: "Deceptive Link", risk: "Medium", color: "amber" },
+                          { url: "hxxp://billing.exarnple.co", issue: "Typosquatting", risk: "High", color: "red" },
                         ].map((r, i) => (
                           <tr key={i} className="hover:bg-white/[0.03]">
                             <td className="py-2 pr-3 text-white/80">{r.url}</td>
@@ -821,19 +2466,14 @@ export default function Page() {
               </div>
             </section>
 
-            {/* Row 2: Supply Chain Vulnerability Mapping */}
-            <section
-              className="rounded-2xl border border-white/10 bg-black/80 p-4"
-              id="vendors"
-            >
+            {/* Row 2: Supply Chain Mapping */}
+            <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="vendors">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Supply Chain Mapping</h2>
                 <div className="flex items-center gap-2">
                   <button
                     className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
-                    onClick={() =>
-                      exportSectionToPDF("vendors", "Supply_Chain_Mapping.pdf")
-                    }
+                    onClick={() => exportSectionToPDF("vendors", "Supply_Chain_Mapping.pdf")}
                   >
                     Export
                   </button>
@@ -841,52 +2481,27 @@ export default function Page() {
               </div>
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                  {/* Simple relationship map */}
                   <div className="relative h-64 rounded-xl bg-black/40">
-                    {/* center */}
                     <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/20 ring-2 ring-emerald-500/40" />
                     <span className="absolute left-1/2 top-[calc(50%+44px)] -translate-x-1/2 text-xs text-white/80">
                       Your Organization
                     </span>
-                    {/* nodes */}
                     {[
-                      {
-                        x: "20%",
-                        y: "18%",
-                        label: "Acme Corp",
-                        color: "bg-red-500/20 ring-red-500/40",
-                      },
-                      {
-                        x: "78%",
-                        y: "26%",
-                        label: "Tech Innovations",
-                        color: "bg-amber-500/20 ring-amber-500/40",
-                      },
-                      {
-                        x: "22%",
-                        y: "74%",
-                        label: "SecureSoft",
-                        color: "bg-sky-500/20 ring-sky-500/40",
-                      },
-                      {
-                        x: "82%",
-                        y: "68%",
-                        label: "Global Insights",
-                        color: "bg-emerald-500/20 ring-emerald-500/40",
-                      },
+                      { x: "20%", y: "18%", label: "Acme Corp", color: "bg-red-500/20 ring-red-500/40" },
+                      { x: "78%", y: "26%", label: "Tech Innovations", color: "bg-amber-500/20 ring-amber-500/40" },
+                      { x: "22%", y: "74%", label: "SecureSoft", color: "bg-sky-500/20 ring-sky-500/40" },
+                      { x: "82%", y: "68%", label: "Global Insights", color: "bg-emerald-500/20 ring-emerald-500/40" },
                     ].map((n, i) => (
                       <div key={i} className="absolute" style={{ left: n.x, top: n.y }}>
                         <div className={`h-10 w-10 rounded-full ring-2 ${n.color}`} />
                         <div className="mt-1 text-[11px] text-white/80">{n.label}</div>
                       </div>
                     ))}
-                    {/* fake connecting lines */}
                     <div className="absolute left-[22%] top-[74%] h-[2px] w-[28%] -rotate-[22deg] bg-white/10" />
                     <div className="absolute left-[50%] top-[50%] h-[2px] w-[30%] -translate-y-1/2 bg-white/10" />
                     <div className="absolute left-[20%] top-[18%] h-[2px] w-[40%] rotate-[18deg] bg-white/10" />
                   </div>
 
-                  {/* vendor table */}
                   <div className="mt-4 overflow-auto rounded-xl border border-white/10">
                     <table className="w-full text-sm">
                       <thead className="bg-white/5 text-left text-white/60">
@@ -925,8 +2540,8 @@ export default function Page() {
                     <div className="flex flex-col gap-2">
                       {[
                         { label: "Acme Corp", ts: "2h ago", level: "High", color: "red" },
-                        { label: "DitaLogic", ts: "5h ago", level: "Medium", color: "amber" },
-                        { label: "Tech Innovations", ts: "1d ago", level: "Med", color: "amber" },
+                        { label: "DataLogic", ts: "5h ago", level: "Medium", color: "amber" },
+                        { label: "Tech Innovations", ts: "1d ago", level: "Medium", color: "amber" },
                         { label: "Global Insights", ts: "1d ago", level: "High", color: "red" },
                       ].map((a, i) => (
                         <div
@@ -951,9 +2566,618 @@ export default function Page() {
                 </div>
               </div>
             </section>
-          </div>
-        </main>
-      </div>
+            {/* Threat Intelligence */}
+            <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="threatintel">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Threat Intelligence</h2>
+                <Badge color="blue">{threatLoading ? "Analyzing…" : "Live Analysis"}</Badge>
+              </div>
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.5fr_0.9fr]">
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <textarea
+                    placeholder="Paste threat intelligence data, IOCs, security logs, or suspicious content for real-time analysis…"
+                    value={threatText}
+                    onChange={(e) => setThreatText(e.target.value)}
+                    className="w-full min-h-[140px] rounded-xl border border-white/10 bg-black/40 p-3 text-sm outline-none placeholder:text-white/40"
+                  />
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      onClick={runThreatAnalysis}
+                      disabled={threatLoading}
+                      className="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/15 disabled:opacity-60"
+                    >
+                      {threatLoading ? "Analyzing…" : "Analyze Threats"}
+                    </button>
+                    {threatErr && <span className="text-rose-400 text-xs">{threatErr}</span>}
+                    {threatOut && (
+                      <span className="text-xs text-white/50">confidence {Math.round((threatOut.confidence ?? 0) * 100)}%</span>
+                    )}
+                  </div>
+
+                  {threatOut && (
+                    <div className="mt-4 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Badge color={threatOut.overallRisk > 0.7 ? "red" : threatOut.overallRisk > 0.4 ? "amber" : "green"}>
+                          Risk Level: {threatOut.overallRisk > 0.7 ? "HIGH" : threatOut.overallRisk > 0.4 ? "MEDIUM" : "LOW"}
+                        </Badge>
+                        <span className="text-xs text-white/60">
+                          Overall Risk: {(threatOut.overallRisk * 100).toFixed(1)}%
+                        </span>
+                      </div>
+
+                      {threatOut.topThreats.length > 0 && (
+                        <div>
+                          <p className="mb-2 text-xs text-white/60">Top Threats Detected</p>
+                          <div className="flex flex-wrap gap-2">
+                            {threatOut.topThreats.map((threat) => (
+                              <span
+                                key={threat}
+                                className="px-2 py-1 text-[11px] rounded-lg bg-red-500/20 text-red-300 ring-1 ring-red-500/30"
+                              >
+                                {threat}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="h-40 rounded-xl border border-white/10 bg-black/40 p-3">
+                          <p className="mb-1 text-xs text-white/60">Threat Analysis</p>
+                          <div className="h-[120px]">
+                            <Bar {...threatAnalysisBar} />
+                          </div>
+                        </div>
+                        <div className="h-40 rounded-xl border border-white/10 bg-black/40 p-3">
+                          <p className="mb-1 text-xs text-white/60">Malware Detection</p>
+                          <div className="h-[120px]">
+                            <Bar {...malwareAnalysisBar} />
+                          </div>
+                        </div>
+                        <div className="h-40 rounded-xl border border-white/10 bg-black/40 p-3">
+                          <p className="mb-1 text-xs text-white/60">Network Threats</p>
+                          <div className="h-[120px]">
+                            <Bar {...networkThreatsBar} />
+                          </div>
+                        </div>
+                        <div className="h-40 rounded-xl border border-white/10 bg-black/40 p-3 relative">
+                          <p className="mb-1 text-xs text-white/60">Overall Risk</p>
+                          <div className="h-[120px]">
+                            <Doughnut {...threatRiskDonut} />
+                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm">
+                              {Math.round((threatOut.overallRisk ?? 0) * 100)}%
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <p className="mb-3 text-sm font-semibold text-white/80">How it works</p>
+                  <ul className="text-sm text-white/70 space-y-1 list-disc pl-5">
+                    <li>Real-time threat intelligence analysis.</li>
+                    <li>Multi-layered analysis: threat classification, malware detection, network security.</li>
+                    <li>Debounced analysis for responsive real-time feedback.</li>
+                    <li>Comprehensive threat scoring with confidence metrics.</li>
+                  </ul>
+                  
+                  <div className="mt-4 p-3 rounded-xl bg-black/40 border border-white/10">
+                    <p className="mb-2 text-xs text-white/60">Sample Inputs</p>
+                    <div className="space-y-1 text-xs text-white/50">
+                      <div>• Security logs and alerts</div>
+                      <div>• Suspicious URLs and domains</div>
+                      <div>• Malware signatures</div>
+                      <div>• Network traffic patterns</div>
+                      <div>• Threat intelligence feeds</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+             </section>
+
+             {/* NEW: AI-Powered Cyber Threat Prediction Engine */}
+             <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="threatprediction">
+               <div className="mb-4 flex items-center justify-between">
+                 <h2 className="text-xl font-semibold">Cyber Threat Prediction Engine</h2>
+                 <Badge color="red">{predictionLoading ? "Predicting…" : "Crystal Ball Active"}</Badge>
+               </div>
+               <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.5fr_0.9fr]">
+                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                   <div className="grid grid-cols-1 gap-3">
+                     <textarea
+                       placeholder="Enter network traffic data, logs, or system metrics for threat prediction…"
+                       value={predictionNetworkData}
+                       onChange={(e) => setPredictionNetworkData(e.target.value)}
+                       className="w-full min-h-[100px] rounded-xl border border-white/10 bg-black/40 p-3 text-sm outline-none placeholder:text-white/40"
+                     />
+                     <textarea
+                       placeholder="Enter user behavior patterns, access logs, or activity data…"
+                       value={predictionUserBehavior}
+                       onChange={(e) => setPredictionUserBehavior(e.target.value)}
+                       className="w-full min-h-[100px] rounded-xl border border-white/10 bg-black/40 p-3 text-sm outline-none placeholder:text-white/40"
+                     />
+                   </div>
+                   <div className="mt-3 flex items-center gap-2">
+                     <button
+                       onClick={runThreatPrediction}
+                       disabled={predictionLoading}
+                       className="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/15 disabled:opacity-60"
+                     >
+                       {predictionLoading ? "Predicting…" : "Predict Threats"}
+                     </button>
+                     {predictionErr && <span className="text-rose-400 text-xs">{predictionErr}</span>}
+                     {predictionOut && (
+                       <span className="text-xs text-white/50">confidence {Math.round((predictionOut.confidence ?? 0) * 100)}%</span>
+                     )}
+                   </div>
+
+                   {predictionOut && (
+                     <div className="mt-4 space-y-4">
+                       <div className="flex items-center gap-2">
+                         <Badge color={predictionOut.riskLevel > 0.7 ? "red" : predictionOut.riskLevel > 0.4 ? "amber" : "green"}>
+                           Risk Level: {predictionOut.riskLevel > 0.7 ? "HIGH" : predictionOut.riskLevel > 0.4 ? "MEDIUM" : "LOW"}
+                         </Badge>
+                         <span className="text-xs text-white/60">
+                           Risk Score: {(predictionOut.riskLevel * 100).toFixed(1)}%
+                         </span>
+                       </div>
+
+                       {predictionOut.topThreats.length > 0 && (
+                         <div>
+                           <p className="mb-2 text-xs text-white/60">Predicted Threats</p>
+                           <div className="flex flex-wrap gap-2">
+                             {predictionOut.topThreats.map((threat) => (
+                               <span
+                                 key={threat}
+                                 className="px-2 py-1 text-[11px] rounded-lg bg-red-500/20 text-red-300 ring-1 ring-red-500/30"
+                               >
+                                 {threat}
+                               </span>
+                             ))}
+                           </div>
+                         </div>
+                       )}
+
+                       {predictionOut.recommendations.length > 0 && (
+                         <div>
+                           <p className="mb-2 text-xs text-white/60">Preventive Recommendations</p>
+                           <ul className="space-y-1">
+                             {predictionOut.recommendations.map((rec, idx) => (
+                               <li key={idx} className="text-xs text-white/70 flex items-start gap-2">
+                                 <span className="text-green-400 mt-0.5">•</span>
+                                 {rec}
+                               </li>
+                             ))}
+                           </ul>
+                         </div>
+                       )}
+
+                       <div className="h-40 rounded-xl border border-white/10 bg-black/40 p-3">
+                         <p className="mb-1 text-xs text-white/60">Threat Prediction Analysis</p>
+                         <div className="h-[120px]">
+                           <Bar {...predictionAnalysisBar} />
+                         </div>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+
+                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                   <p className="mb-3 text-sm font-semibold text-white/80">Revolutionary Features</p>
+                   <ul className="text-sm text-white/70 space-y-1 list-disc pl-5">
+                     <li>Predicts cyber attacks 24-48 hours in advance</li>
+                     <li>Analyzes network patterns and user behavior</li>
+                     <li>Provides actionable prevention recommendations</li>
+                     <li>Real-time threat probability scoring</li>
+                   </ul>
+                   
+                   <div className="mt-4 p-3 rounded-xl bg-black/40 border border-white/10">
+                     <p className="mb-2 text-xs text-white/60">Sample Inputs</p>
+                     <div className="space-y-1 text-xs text-white/50">
+                       <div>• Network traffic logs</div>
+                       <div>• User access patterns</div>
+                       <div>• System performance metrics</div>
+                       <div>• Security event logs</div>
+                       <div>• Behavioral analytics data</div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </section>
+
+             {/* NEW: AI-Powered Social Engineering Defense */}
+             <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="socialdefense">
+               <div className="mb-4 flex items-center justify-between">
+                 <h2 className="text-xl font-semibold">Social Engineering Defense</h2>
+                 <Badge color="amber">{socialEngLoading ? "Analyzing…" : "Human Shield Active"}</Badge>
+               </div>
+               <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.5fr_0.9fr]">
+                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                   <textarea
+                     placeholder="Paste any communication content - emails, messages, phone transcripts, social media posts for social engineering analysis…"
+                     value={socialEngText}
+                     onChange={(e) => setSocialEngText(e.target.value)}
+                     className="w-full min-h-[140px] rounded-xl border border-white/10 bg-black/40 p-3 text-sm outline-none placeholder:text-white/40"
+                   />
+                   <div className="mt-3 flex items-center gap-2">
+                     <button
+                       onClick={runSocialEngineeringAnalysis}
+                       disabled={socialEngLoading}
+                       className="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/15 disabled:opacity-60"
+                     >
+                       {socialEngLoading ? "Analyzing…" : "Analyze Social Engineering"}
+                     </button>
+                     {socialEngErr && <span className="text-rose-400 text-xs">{socialEngErr}</span>}
+                     {socialEngOut && (
+                       <span className="text-xs text-white/50">confidence {Math.round((socialEngOut.confidence ?? 0) * 100)}%</span>
+                     )}
+                   </div>
+
+                   {socialEngOut && (
+                     <div className="mt-4 space-y-4">
+                       <div className="flex items-center gap-2">
+                         <Badge color={socialEngOut.riskLevel > 0.7 ? "red" : socialEngOut.riskLevel > 0.4 ? "amber" : "green"}>
+                           Attack Type: {socialEngOut.attackType.toUpperCase()}
+                         </Badge>
+                         <span className="text-xs text-white/60">
+                           Risk Level: {(socialEngOut.riskLevel * 100).toFixed(1)}%
+                         </span>
+                       </div>
+
+                       {socialEngOut.defenseRecommendations.length > 0 && (
+                         <div>
+                           <p className="mb-2 text-xs text-white/60">Defense Recommendations</p>
+                           <ul className="space-y-1">
+                             {socialEngOut.defenseRecommendations.map((rec, idx) => (
+                               <li key={idx} className="text-xs text-white/70 flex items-start gap-2">
+                                 <span className="text-blue-400 mt-0.5">•</span>
+                                 {rec}
+                               </li>
+                             ))}
+                           </ul>
+                         </div>
+                       )}
+
+                       <div className="h-40 rounded-xl border border-white/10 bg-black/40 p-3">
+                         <p className="mb-1 text-xs text-white/60">Social Engineering Analysis</p>
+                         <div className="h-[120px]">
+                           <Bar {...socialEngAnalysisBar} />
+                         </div>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+
+                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                   <p className="mb-3 text-sm font-semibold text-white/80">Advanced Protection</p>
+                   <ul className="text-sm text-white/70 space-y-1 list-disc pl-5">
+                     <li>Detects all types of social engineering attacks</li>
+                     <li>Real-time communication analysis</li>
+                     <li>Voice and text pattern recognition</li>
+                     <li>Automated defense recommendations</li>
+                   </ul>
+                   
+                   <div className="mt-4 p-3 rounded-xl bg-black/40 border border-white/10">
+                     <p className="mb-2 text-xs text-white/60">Attack Types Detected</p>
+                     <div className="space-y-1 text-xs text-white/50">
+                       <div>• Phishing emails & messages</div>
+                       <div>• Vishing (voice phishing)</div>
+                       <div>• Smishing (SMS phishing)</div>
+                       <div>• Pretexting & impersonation</div>
+                       <div>• Baiting & quid pro quo</div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </section>
+
+             {/* NEW: Quantum-Safe Encryption Advisor */}
+             <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="quantumadvisor">
+               <div className="mb-4 flex items-center justify-between">
+                 <h2 className="text-xl font-semibold">Quantum Encryption Advisor</h2>
+                 <Badge color="blue">{quantumLoading ? "Analyzing…" : "Future-Proof Active"}</Badge>
+               </div>
+               <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.5fr_0.9fr]">
+                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                   <textarea
+                     placeholder="Enter your current encryption standards, cryptographic algorithms, or security protocols for quantum readiness analysis…"
+                     value={quantumEncryptionData}
+                     onChange={(e) => setQuantumEncryptionData(e.target.value)}
+                     className="w-full min-h-[140px] rounded-xl border border-white/10 bg-black/40 p-3 text-sm outline-none placeholder:text-white/40"
+                   />
+                   <div className="mt-3 flex items-center gap-2">
+                     <button
+                       onClick={runQuantumAnalysis}
+                       disabled={quantumLoading}
+                       className="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/15 disabled:opacity-60"
+                     >
+                       {quantumLoading ? "Analyzing…" : "Analyze Quantum Readiness"}
+                     </button>
+                     {quantumErr && <span className="text-rose-400 text-xs">{quantumErr}</span>}
+                     {quantumOut && (
+                       <span className="text-xs text-white/50">confidence {Math.round((quantumOut.confidence ?? 0) * 100)}%</span>
+                     )}
+                   </div>
+
+                   {quantumOut && (
+                     <div className="mt-4 space-y-4">
+                       <div className="flex items-center gap-2">
+                         <Badge color={quantumOut.vulnerabilityLevel > 0.7 ? "red" : quantumOut.vulnerabilityLevel > 0.4 ? "amber" : "green"}>
+                           Quantum Vulnerability: {quantumOut.vulnerabilityLevel > 0.7 ? "HIGH" : quantumOut.vulnerabilityLevel > 0.4 ? "MEDIUM" : "LOW"}
+                         </Badge>
+                         <span className="text-xs text-white/60">
+                           Vulnerability: {(quantumOut.vulnerabilityLevel * 100).toFixed(1)}%
+                         </span>
+                       </div>
+
+                       {quantumOut.recommendations.length > 0 && (
+                         <div>
+                           <p className="mb-2 text-xs text-white/60">Quantum-Safe Recommendations</p>
+                           <ul className="space-y-1">
+                             {quantumOut.recommendations.map((rec, idx) => (
+                               <li key={idx} className="text-xs text-white/70 flex items-start gap-2">
+                                 <span className="text-purple-400 mt-0.5">•</span>
+                                 {rec}
+                               </li>
+                             ))}
+                           </ul>
+                         </div>
+                       )}
+
+                       {quantumOut.migrationPlan.length > 0 && (
+                         <div>
+                           <p className="mb-2 text-xs text-white/60">Migration Plan</p>
+                           <ul className="space-y-1">
+                             {quantumOut.migrationPlan.map((phase, idx) => (
+                               <li key={idx} className="text-xs text-white/70 flex items-start gap-2">
+                                 <span className="text-cyan-400 mt-0.5">{idx + 1}.</span>
+                                 {phase}
+                               </li>
+                             ))}
+                           </ul>
+                         </div>
+                       )}
+
+                       <div className="h-40 rounded-xl border border-white/10 bg-black/40 p-3">
+                         <p className="mb-1 text-xs text-white/60">Quantum Security Analysis</p>
+                         <div className="h-[120px]">
+                           <Bar {...quantumAnalysisBar} />
+                         </div>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+
+                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                   <p className="mb-3 text-sm font-semibold text-white/80">Future-Proof Security</p>
+                   <ul className="text-sm text-white/70 space-y-1 list-disc pl-5">
+                     <li>Prepares for quantum computing threats</li>
+                     <li>Analyzes current encryption vulnerabilities</li>
+                     <li>Provides migration roadmap</li>
+                     <li>Recommends post-quantum algorithms</li>
+                   </ul>
+                   
+                   <div className="mt-4 p-3 rounded-xl bg-black/40 border border-white/10">
+                     <p className="mb-2 text-xs text-white/60">Quantum Threats</p>
+                     <div className="space-y-1 text-xs text-white/50">
+                       <div>• Shor's algorithm breaking RSA</div>
+                       <div>• Grover's algorithm halving key strength</div>
+                       <div>• Quantum key distribution needs</div>
+                       <div>• Post-quantum cryptography</div>
+                       <div>• Hybrid encryption solutions</div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </section>
+
+             {/* NEW: AI-Powered Incident Response Orchestrator */}
+             <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="incidentresponse">
+               <div className="mb-4 flex items-center justify-between">
+                 <h2 className="text-xl font-semibold">Incident Response Orchestrator</h2>
+                 <Badge color="green">{incidentLoading ? "Orchestrating…" : "Auto-Response Active"}</Badge>
+               </div>
+               <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.5fr_0.9fr]">
+                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                   <textarea
+                     placeholder="Enter incident details, security alerts, system logs, or threat indicators for automated response orchestration…"
+                     value={incidentData}
+                     onChange={(e) => setIncidentData(e.target.value)}
+                     className="w-full min-h-[140px] rounded-xl border border-white/10 bg-black/40 p-3 text-sm outline-none placeholder:text-white/40"
+                   />
+                   <div className="mt-3 flex items-center gap-2">
+                     <button
+                       onClick={runIncidentResponseAnalysis}
+                       disabled={incidentLoading}
+                       className="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/15 disabled:opacity-60"
+                     >
+                       {incidentLoading ? "Orchestrating…" : "Orchestrate Response"}
+                     </button>
+                     {incidentErr && <span className="text-rose-400 text-xs">{incidentErr}</span>}
+                     {incidentOut && (
+                       <span className="text-xs text-white/50">confidence {Math.round((incidentOut.confidence ?? 0) * 100)}%</span>
+                     )}
+                   </div>
+
+                   {incidentOut && (
+                     <div className="mt-4 space-y-4">
+                       <div className="flex items-center gap-2">
+                         <Badge color={incidentOut.severity > 0.7 ? "red" : incidentOut.severity > 0.4 ? "amber" : "green"}>
+                           Response Action: {incidentOut.responseAction.replace(/_/g, ' ').toUpperCase()}
+                         </Badge>
+                         <span className="text-xs text-white/60">
+                           Severity: {(incidentOut.severity * 100).toFixed(1)}%
+                         </span>
+                       </div>
+
+                       {incidentOut.automatedActions.length > 0 && (
+                         <div>
+                           <p className="mb-2 text-xs text-white/60">Automated Actions</p>
+                           <ul className="space-y-1">
+                             {incidentOut.automatedActions.map((action, idx) => (
+                               <li key={idx} className="text-xs text-white/70 flex items-start gap-2">
+                                 <span className="text-green-400 mt-0.5">✓</span>
+                                 {action}
+                               </li>
+                             ))}
+                           </ul>
+                         </div>
+                       )}
+
+                       <div className="h-40 rounded-xl border border-white/10 bg-black/40 p-3">
+                         <p className="mb-1 text-xs text-white/60">Incident Response Analysis</p>
+                         <div className="h-[120px]">
+                           <Bar {...incidentResponseBar} />
+                         </div>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+
+                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                   <p className="mb-3 text-sm font-semibold text-white/80">Automated Response</p>
+                   <ul className="text-sm text-white/70 space-y-1 list-disc pl-5">
+                     <li>Automatically responds to security incidents</li>
+                     <li>Learns from each attack to improve</li>
+                     <li>Self-healing network infrastructure</li>
+                     <li>Dynamic threat response orchestration</li>
+                   </ul>
+                   
+                   <div className="mt-4 p-3 rounded-xl bg-black/40 border border-white/10">
+                     <p className="mb-2 text-xs text-white/60">Response Actions</p>
+                     <div className="space-y-1 text-xs text-white/50">
+                       <div>• Auto-isolate compromised systems</div>
+                       <div>• Block malicious IP addresses</div>
+                       <div>• Deploy emergency patches</div>
+                       <div>• Notify security team</div>
+                       <div>• Activate incident response plan</div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </section>
+
+             {/* Infer Secure */}
+            <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="infersecure">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Infer Secure</h2>
+                <Badge color="green">{infLoading ? "Scanning…" : "Operational"}</Badge>
+              </div>
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.5fr_0.9fr]">
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <p className="text-xs text-white/60 mb-2">
+                    Demo supports <b>.txt</b> in this page. (PDF/DOCX require extra parsers.)
+                  </p>
+                  <input
+                    type="file"
+                    accept=".txt,text/plain"
+                    onChange={(e) => setInfFile(e.target.files?.[0] ?? null)}
+                    className="block text-sm text-white/80"
+                  />
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      onClick={runInferSecure}
+                      disabled={infLoading || !infFile}
+                      className="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/15 disabled:opacity-60"
+                    >
+                      {infLoading ? "Scanning…" : "Scan"}
+                    </button>
+                    {infErr && <span className="text-rose-400 text-xs">{infErr}</span>}
+                    {infOut && (
+                      <span className="text-xs text-white/50">
+                      confidence {Math.round((infOut.confidence ?? 0) * 100)}%
+                    </span>
+                  )}
+                </div>
+
+                {infOut && (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        color={
+                          infOut.verdict === "HIGH"
+                            ? "red"
+                            : infOut.verdict === "MEDIUM"
+                            ? "amber"
+                            : "green"
+                        }
+                      >
+                        RISK: {infOut.verdict}
+                      </Badge>
+                      <span className="text-xs text-white/60">
+                        score={infOut.riskScore.toFixed(3)}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="h-44 rounded-xl border border-white/10 bg-black/40 p-3">
+                        <p className="mb-1 text-xs text-white/60">ML Scores</p>
+                        <div className="h-[136px]">
+                          <Bar {...infMlBar} />
+                        </div>
+                      </div>
+
+                      <div className="h-44 rounded-xl border border-white/10 bg-black/40 p-3">
+                        <p className="mb-1 text-xs text-white/60">Heuristic Signals</p>
+                        <div className="h-[136px]">
+                          <Bar {...infHeurBar} />
+                        </div>
+                      </div>
+
+                      <div className="h-44 rounded-xl border border-white/10 bg-black/40 p-3 relative md:col-span-2">
+                        <p className="mb-1 text-xs text-white/60">Overall Risk</p>
+                        <div className="h-[136px]">
+                          <Doughnut {...infRiskDonut} />
+                          <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm">
+                            {Math.round((infOut.riskScore ?? 0) * 100)}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <details className="rounded-xl border border-white/10 bg-[#0b0a0b] p-3">
+                      <summary className="cursor-pointer text-xs text-white/70">
+                        Raw details
+                      </summary>
+                      <pre className="mt-2 whitespace-pre-wrap break-words text-[11px]">
+                        {JSON.stringify({ mlScores: infOut.mlScores, heuristics: infOut.heuristics }, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="mb-2 text-sm font-semibold">Signals</p>
+                <ul className="text-sm text-white/70 space-y-1 list-disc pl-5">
+                  <li>
+                    Zero-shot labels: <i>malicious</i>, <i>phishing</i>, <i>credential_harvest</i>,{" "}
+                    <i>scam</i>, <i>spam</i>, <i>benign</i>.
+                  </li>
+                  <li>Heuristics: links/emails/macros/threat/money keywords, JS markers, attachment cues, size.</li>
+                  <li>Blend: 55% ML + 45% heuristics with benign anchoring.</li>
+                </ul>
+                {infOut?.heuristics?.sampleLinks?.length ? (
+                  <div className="mt-3">
+                    <p className="mb-1 text-xs text-white/60">Sample Links</p>
+                    <ul className="text-xs text-white/70 space-y-1 list-disc pl-5">
+                      {infOut.heuristics.sampleLinks.map((u: string, i: number) => (
+                        <li key={i} className="truncate">
+                          {u}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
     </div>
+  </div>
   );
 }
+
