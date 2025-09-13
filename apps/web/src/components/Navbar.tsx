@@ -323,14 +323,18 @@ export default function Navbar() {
                 <button 
                   type="button"
                   onClick={toggleSignIn}
-                  className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700"
+                  className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-white/90"
                 >
                   Sign in
                 </button>
               )}
+                <Link 
+                  href={`/dashboard`}
+                  className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-black hover:bg-white/90 hover:translate-x-[1px] transition"
+                >
+                  Dashboard
+                </Link>
             </div>
-
-            {/* Mobile Menu Button */}
             <button
               aria-label="Toggle menu"
               aria-expanded={open}
@@ -462,7 +466,7 @@ export default function Navbar() {
       {/* Sign In Modal/Drawer */}
       {isSignInOpen && (
         <div className="sign-in-container">
-          <SignIn isOpen={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
+          <SignIn isOpen={isSignInOpen} onClose={() => setIsSignInOpen(false)} redirectUrl="/dashboard"/>
         </div>
       )}
 

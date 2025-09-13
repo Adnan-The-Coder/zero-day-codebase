@@ -295,11 +295,11 @@ const SignIn: React.FC<SignInProps> = ({ isOpen, onClose, redirectUrl }) => {
     <>
       {/* Modal Overlay */}
       <div
-        className="fixed inset-0 z-50 bg-black bg-opacity-50 transition-opacity"
+        className="fixed inset-0 z-50 bg-black/20 bg-opacity-50 transition-opacity"
         onClick={onClose}
       ></div>
       {/* Modal Content */}
-      <div className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-6 shadow-2xl">
+      <div className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-[#1c1c1c] p-6 shadow-2xl">
         <div className="relative">
           {/* Close Button */}
           <button
@@ -314,7 +314,7 @@ const SignIn: React.FC<SignInProps> = ({ isOpen, onClose, redirectUrl }) => {
             <div className="flex justify-center">
               <div className="relative size-16">
                 <Image
-                  src="/assets/logo_Without_Text.png"
+                  src="/assets/logo.png"
                   alt="Plantomart Logo"
                   fill
                   className="object-contain"
@@ -322,10 +322,10 @@ const SignIn: React.FC<SignInProps> = ({ isOpen, onClose, redirectUrl }) => {
                 />
               </div>
             </div>
-            <h2 className="mt-4 text-2xl font-bold text-gray-900">Sign in to your account</h2>
-            <p className="mt-2 text-sm text-gray-600">
+            <h2 className="mt-4 text-2xl font-bold text-white">Sign in to your account</h2>
+            <p className="mt-2 text-sm text-white/60">
               Don't have an account?{' '}
-              <Link href="/signup" className="font-medium text-green-600 hover:text-green-500">
+              <Link href="/signup" className="font-medium text-white-600 hover:text-white-500">
                 Sign up
               </Link>
             </p>
@@ -349,8 +349,8 @@ const SignIn: React.FC<SignInProps> = ({ isOpen, onClose, redirectUrl }) => {
             </div>
           )}
           {message && (
-            <div className="mt-4 rounded border-l-4 border-green-500 bg-green-50 p-3">
-              <p className="text-sm text-green-700">{message}</p>
+            <div className="mt-4 rounded border-l-4 border-white-500 bg-white-50 p-3">
+              <p className="text-sm text-white-700">{message}</p>
             </div>
           )}
           <form className="mt-6 space-y-6" onSubmit={handleEmailSignIn}>
@@ -366,7 +366,7 @@ const SignIn: React.FC<SignInProps> = ({ isOpen, onClose, redirectUrl }) => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="relative block w-full appearance-none rounded-md border border-gray-300 px-10 py-3 placeholder-gray-500 focus:z-10 focus:border-green-500 focus:outline-none focus:ring-green-500 sm:text-sm"
+                  className="relative block w-full appearance-none rounded-md border border-gray-300 px-10 py-3 placeholder-gray-500 focus:z-10 focus:border-white-500 focus:outline-none focus:ring-white-500 sm:text-sm"
                   placeholder="Email address"
                 />
               </div>
@@ -381,7 +381,7 @@ const SignIn: React.FC<SignInProps> = ({ isOpen, onClose, redirectUrl }) => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="relative block w-full appearance-none rounded-md border border-gray-300 px-10 py-3 placeholder-gray-500 focus:z-10 focus:border-green-500 focus:outline-none focus:ring-green-500 sm:text-sm"
+                  className="relative block w-full appearance-none rounded-md border border-gray-300 px-10 py-3 placeholder-gray-500 focus:z-10 focus:border-white-500 focus:outline-none focus:ring-white-500 sm:text-sm"
                   placeholder="Password"
                 />
                 <button
@@ -403,16 +403,16 @@ const SignIn: React.FC<SignInProps> = ({ isOpen, onClose, redirectUrl }) => {
                   id={element_unique_id}
                   name="remember-me"
                   type="checkbox"
-                  className="size-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                  className="size-4 rounded border-gray-300 text-white-600 focus:ring-white-500"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-white">
                   Remember me
                 </label>
               </div>
               <button
                 type="button"
                 onClick={handlePasswordReset}
-                className="text-sm font-medium text-green-600 hover:text-green-500"
+                className="text-sm font-medium text-white-600 hover:text-white-500"
               >
                 Forgot your password?
               </button>
@@ -421,7 +421,7 @@ const SignIn: React.FC<SignInProps> = ({ isOpen, onClose, redirectUrl }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative flex w-full justify-center rounded-md border border-transparent bg-green-600 px-4 py-3 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-70"
+                className="group relative flex w-full justify-center rounded-md border border-transparent bg-white text-black px-4 py-3 text-sm font-medium hover:bg-white-700 focus:outline-none focus:ring-2 focus:ring-white-500 focus:ring-offset-2 disabled:opacity-70"
               >
                 {loading ? (
                   <Loader2 className="mr-2 size-5 animate-spin" />
@@ -435,7 +435,7 @@ const SignIn: React.FC<SignInProps> = ({ isOpen, onClose, redirectUrl }) => {
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300"></div>
               </div>
-              <div className="relative flex justify-center text-sm">
+              <div className="relative flex justify-center text-sm rounded-xl">
                 <span className="bg-white px-2 text-gray-500">Or continue with</span>
               </div>
             </div>
@@ -444,7 +444,7 @@ const SignIn: React.FC<SignInProps> = ({ isOpen, onClose, redirectUrl }) => {
               <button
                 onClick={handleGoogleSignIn}
                 disabled={loading}
-                className="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-70"
+                className="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-white-500 focus:ring-offset-2 disabled:opacity-70"
               >
                 <svg className="mr-2 size-5" viewBox="0 0 24 24">
                   <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
