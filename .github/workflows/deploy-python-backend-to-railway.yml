@@ -89,10 +89,9 @@ jobs:
         railway --version
 
     - name: 🔐 Configure Railway Authentication
-      run: |
-        echo "✅ Using Railway API Token"
       env:
         RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      run: echo "✅ Using Railway API Token"
 
     - name: 🔗 Link Railway Project
       working-directory: ${{ env.WORKING_DIRECTORY }}
@@ -100,10 +99,11 @@ jobs:
         RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       run: |
         if [ -n "${{ secrets.RAILWAY_PROJECT_ID }}" ]; then
-          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --yes
-          echo "✅ Linked to project: ${{ secrets.RAILWAY_PROJECT_ID }}"
+          echo "🔗 Linking to Railway project: ${{ secrets.RAILWAY_PROJECT_ID }}"
+          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
         else
           echo "ℹ️ No PROJECT_ID provided, falling back to railway.json"
+          railway link || true
         fi
 
     - name: 🚀 Deploy to Railway
@@ -114,13 +114,13 @@ jobs:
       run: |
         echo "🚀 Starting Railway deployment..."
 
-        # Set environment variables if provided
+        # Import environment variables if provided
         if [ -n "${{ secrets.RAILWAY_ENVIRONMENT_VARS }}" ]; then
           echo '${{ secrets.RAILWAY_ENVIRONMENT_VARS }}' | railway variables import --json
         fi
 
         # Deploy the application
-        railway up --yes --detach
+        railway up --detach
 
         # Get deployment URL
         RAILWAY_URL=$(railway status --json | jq -r '.deployments[0].url // "https://your-app.railway.app"')
