@@ -59,6 +59,7 @@ jobs:
       if: steps.changes.outputs.backend == 'true'
       working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
+        # Ignore F824 (unused global) to unblock pipeline
         flake8 app/ main.py --count --select=E9,F63,F7,F82 --ignore=F824 --show-source --statistics
         flake8 app/ main.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
@@ -68,7 +69,7 @@ jobs:
       run: |
         docker build -t ml-backend:test .
         echo "✅ Docker build successful"
-  
+
   # Deploy to Railway
   deploy:
     name: 🚀 Deploy to Railway
@@ -88,19 +89,28 @@ jobs:
         npm install -g @railway/cli
         railway --version
 
-    - name: 🔐 Configure Railway Authentication
+    - name: 🔐 Railway Login
       env:
-        RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      run: echo "✅ Using Railway API Token"
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      run: |
+        if [ -z "$RAILWAY_TOKEN" ]; then
+          echo "❌ RAILWAY_TOKEN secret is not set"
+          echo "🔧 Get your token from: https://railway.app/account/tokens"
+          exit 1
+        fi
+        echo "✅ Railway token configured"
+        # Authenticate with Railway using the token
+        echo "$RAILWAY_TOKEN" | railway login --token
 
     - name: 🔗 Link Railway Project
-      working-directory: ${{ env.WORKING_DIRECTORY }}
       env:
-        RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
         if [ -n "${{ secrets.RAILWAY_PROJECT_ID }}" ]; then
           echo "🔗 Linking to Railway project: ${{ secrets.RAILWAY_PROJECT_ID }}"
           railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
+          echo "✅ Linked to existing project: ${{ secrets.RAILWAY_PROJECT_ID }}"
         else
           echo "ℹ️ No PROJECT_ID provided, falling back to railway.json"
           railway link || true
@@ -108,45 +118,56 @@ jobs:
 
     - name: 🚀 Deploy to Railway
       id: deploy
-      working-directory: ${{ env.WORKING_DIRECTORY }}
       env:
-        RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
         echo "🚀 Starting Railway deployment..."
-
-        # Import environment variables if provided
+        
+        # Set environment variables if provided
         if [ -n "${{ secrets.RAILWAY_ENVIRONMENT_VARS }}" ]; then
-          echo '${{ secrets.RAILWAY_ENVIRONMENT_VARS }}' | railway variables import --json
+          echo "⚙️ Setting environment variables..."
+          railway variables --json '${{ secrets.RAILWAY_ENVIRONMENT_VARS }}'
         fi
-
+        
         # Deploy the application
         railway up --detach
-
-        # Get deployment URL
+        
+        # Get the deployment URL
         RAILWAY_URL=$(railway status --json | jq -r '.deployments[0].url // "https://your-app.railway.app"')
         echo "url=$RAILWAY_URL" >> $GITHUB_OUTPUT
-        echo "✅ Deployment completed!"
-        echo "🌐 App URL: $RAILWAY_URL"
+        echo "✅ Deployment completed successfully!"
+        echo "🌐 Application URL: $RAILWAY_URL"
 
     - name: 🏥 Health Check
       id: health-check
       run: |
         echo "🏥 Performing health check..."
         URL="${{ steps.deploy.outputs.url }}"
+        
+        # Wait for deployment to be ready
+        echo "⏳ Waiting for deployment to be ready..."
         sleep 60
         
+        # Perform health check with retries
         for i in {1..10}; do
           echo "🔍 Health check attempt $i/10..."
+          
           if curl -f --connect-timeout 10 --max-time 30 "$URL/health"; then
             echo "✅ Health check passed!"
+            
+            # Test the main API endpoint
             if curl -f -X POST "$URL/api/v1/spam/classify" \
               -H "Content-Type: application/json" \
-              -d '{"text":"test message"}'; then
+              -d '{"text":"test message"}' \
+              --connect-timeout 10 --max-time 30; then
               echo "✅ API endpoint test passed!"
+            else
+              echo "⚠️ API endpoint test failed, but health check passed"
             fi
             break
           else
-            echo "❌ Health check failed, retrying in 30s..."
+            echo "❌ Health check failed, retrying in 30 seconds..."
             if [ $i -eq 10 ]; then
               echo "❌ Health check failed after 10 attempts"
               exit 1
@@ -165,6 +186,11 @@ jobs:
         echo "| 📝 **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
         echo "| 👤 **Deployed by** | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
         echo "| ⏰ **Deploy Time** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+        echo "- [Health Check](${{ steps.deploy.outputs.url }}/health)" >> $GITHUB_STEP_SUMMARY
+        echo "- [API Docs](${{ steps.deploy.outputs.url }}/docs)" >> $GITHUB_STEP_SUMMARY
+        echo "- [Railway Dashboard](https://railway.app/dashboard)" >> $GITHUB_STEP_SUMMARY
 
   # Notify on failure
   notify-failure:
@@ -176,7 +202,10 @@ jobs:
     - name: 📢 Deployment Failed
       run: |
         echo "## ❌ Railway Deployment Failed" >> $GITHUB_STEP_SUMMARY
-        echo "Check logs above." >> $GITHUB_STEP_SUMMARY
-        echo "- Ensure \`RAILWAY_TOKEN\` secret is valid" >> $GITHUB_STEP_SUMMARY
-        echo "- Ensure \`RAILWAY_PROJECT_ID\` is correct" >> $GITHUB_STEP_SUMMARY
-        echo "- App startup issues (missing model, crash, etc.)" >> $GITHUB_STEP_SUMMARY
+        echo "The deployment to Railway has failed. Please check the logs above for details." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔍 Common Issues:" >> $GITHUB_STEP_SUMMARY
+        echo "- Missing \`RAILWAY_TOKEN\` secret" >> $GITHUB_STEP_SUMMARY
+        echo "- Missing or invalid \`RAILWAY_PROJECT_ID\` secret" >> $GITHUB_STEP_SUMMARY
+        echo "- Application startup issues" >> $GITHUB_STEP_SUMMARY
+        echo "- Model files not found" >> $GITHUB_STEP_SUMMARY

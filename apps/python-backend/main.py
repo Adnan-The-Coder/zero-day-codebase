@@ -13,7 +13,7 @@ from app.core.logging_config import setup_logging
 
 # Global model manager instance
 model_manager = None
-
+#model comment (check)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
