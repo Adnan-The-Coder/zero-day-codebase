@@ -3283,13 +3283,12 @@ export default function Page() {
         <main className="min-h-[calc(100vh-56px)] bg-[#09080b] to-transparent p-1 xl:p-3" id="phishing">
           <div className="grid grid-cols-1 gap-6">
             {/* Row 1: AI-Driven Phishing Detection */}
-            <PhishingDetection phishingScore={phishingScore} />
 
             {/* Row 2: Supply Chain Mapping */}
             <SupplyChainMapping 
-  userUUID={user?.id ?? ""} 
-  onExport={() => exportSectionToPDF("vendors", "Supply_Chain_Mapping.pdf")} 
-/>            {/* Threat Intelligence */}
+              onExport={() => exportSectionToPDF("vendors", "Supply_Chain_Mapping.pdf")} 
+            /> {/* Threat Intelligence */}
+            <PhishingDetection phishingScore={phishingScore} />
             <section className="rounded-2xl border border-white/10 bg-black/80 p-4" id="threatintel">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Threat Intelligence</h2>

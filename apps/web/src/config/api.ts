@@ -20,4 +20,5 @@ export const API_ENDPOINTS = {
     updateVendors: `${API_BASE_URL}/supplychain/vendors/update`, // Adding/updating vendors for an organization
     deleteVendors: `${API_BASE_URL}/supplychain/vendors/delete`, // Removing all vendors from an organization
      getOrganizationVendors: `${API_BASE_URL}/supplychain/vendors/get`, // Fetching all vendors for an organization (requires organizationID param)
+     getOrganizationsByUUID: `${API_BASE_URL}/supplychain/get-by-uuid`, // Fetching organizations by user UUID
 }
