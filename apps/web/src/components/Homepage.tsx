@@ -78,6 +78,46 @@ export default function HomePage() {
           <AboutSection/>
         </motion.div>
       </motion.section>
+      <section id="supply-chain" className="relative z-10 mx-auto max-w-6xl px-4 pb-28 pt-8">
+        <div className="grid items-center gap-10 md:grid-cols-2">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.5, delay: 0.05 }}
+          >
+            <MockGraph />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              Supply Chain Mapping
+            </h2>
+            <p className="mt-3 text-white/70">
+              Real-time view of third party risk with scores, graph view, and
+              proactive alerts.
+            </p>
+            <ul className="mt-6 space-y-3 text-sm text-white/80">
+              <li className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <strong>Vendor Risk Dashboard.</strong> Dynamic scores from
+                breach history, CVEs, and threat intel overlays.
+              </li>
+              <li className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <strong>Interactive Map.</strong> Nodes sized/colored by risk
+                for instant hotspots.
+              </li>
+              <li className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <strong>Automated Alerts.</strong> Get notified on major score
+                changes or new vulnerabilities.
+              </li>
+            </ul>
+          </motion.div>
+        </div>
+      </section>
       <section id="features" className="relative z-10 mx-auto max-w-6xl px-4 py-16 md:py-24">
         <div className="grid items-center gap-10 md:grid-cols-2">
           <motion.div
@@ -119,46 +159,6 @@ export default function HomePage() {
               <KeyRow label="Urgency language" value="Present" />
               <KeyRow label="URL trust" value="Low — recent domain" />
             </MockCard>
-          </motion.div>
-        </div>
-      </section>
-      <section id="supply-chain" className="relative z-10 mx-auto max-w-6xl px-4 pb-28 pt-8">
-        <div className="grid items-center gap-10 md:grid-cols-2">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.5, delay: 0.05 }}
-          >
-            <MockGraph />
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Supply Chain Mapping
-            </h2>
-            <p className="mt-3 text-white/70">
-              Real-time view of third party risk with scores, graph view, and
-              proactive alerts.
-            </p>
-            <ul className="mt-6 space-y-3 text-sm text-white/80">
-              <li className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <strong>Vendor Risk Dashboard.</strong> Dynamic scores from
-                breach history, CVEs, and threat intel overlays.
-              </li>
-              <li className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <strong>Interactive Map.</strong> Nodes sized/colored by risk
-                for instant hotspots.
-              </li>
-              <li className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <strong>Automated Alerts.</strong> Get notified on major score
-                changes or new vulnerabilities.
-              </li>
-            </ul>
           </motion.div>
         </div>
       </section>
