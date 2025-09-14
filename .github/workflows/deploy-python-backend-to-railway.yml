@@ -89,7 +89,7 @@ jobs:
         npm install -g @railway/cli
         railway --version
 
-    - name: 🔐 Railway Login
+    - name: 🔐 Railway Authentication
       env:
         RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       run: |
@@ -99,8 +99,8 @@ jobs:
           exit 1
         fi
         echo "✅ Railway token configured"
-        # Authenticate with Railway using the token
-        echo "$RAILWAY_TOKEN" | railway login --token
+        # Railway CLI automatically authenticates when RAILWAY_TOKEN is set
+        echo "🔐 Authentication will be handled automatically by Railway CLI"
 
     - name: 🔗 Link Railway Project
       env:
