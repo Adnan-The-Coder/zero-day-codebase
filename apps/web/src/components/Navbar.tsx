@@ -4,10 +4,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import SignIn from './auth/Sign-in';
-import { API_ENDPOINTS } from '@/config/api';
+import SignIn from "./auth/Sign-in";
+import { API_ENDPOINTS } from "@/config/api";
 
-import { supabase } from '@/utils/supabase/client';
+import { supabase } from "@/utils/supabase/client";
 import { LogOut } from "lucide-react";
 
 interface UserProfile {
@@ -35,17 +35,20 @@ export default function Navbar() {
   // Check if user is already logged in
   const checkUserSession = async () => {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
       if (error) {
-        console.error('Error getting session:', error);
+        console.error("Error getting session:", error);
         return;
       }
-      
+
       if (session) {
         await fetchUserProfile(session.user.id);
       }
     } catch (error) {
-      console.error('Error checking user session:', error);
+      console.error("Error checking user session:", error);
     } finally {
       setIsLoading(false);
     }
@@ -53,91 +56,73 @@ export default function Navbar() {
 
   const toggleSignIn = () => {
     setIsSignInOpen(!isSignInOpen);
-    // Close other menus when opening sign-in
     setIsUserMenuOpen(false);
     setOpen(false);
   };
 
   // Fetch user profile data
   const fetchUserProfile = async (userId: string) => {
-    console.log('Fetching user profile for ID:', userId);
+    console.log("Fetching user profile for ID:", userId);
     try {
-      // Use the backend API instead of direct Supabase query
       const res = await fetch(API_ENDPOINTS.getProfileByUUID(userId), {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
       });
-      
+
       if (!res.ok) {
-        console.error('Error fetching user profile:', res.status, res.statusText);
-        // If profile doesn't exist yet, create a basic one from auth data
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) {
-          console.error('Error getting user:', error);
-          return;
-        }
-        
-        if (user) {
-          setUser({
-            id: user.id,
-            email: user.email || '',
-            full_name: user.user_metadata?.full_name,
-            avatar_url: user.user_metadata?.avatar_url || user.identities?.[0]?.identity_data?.avatar_url
-          });
-        }
+        console.error("Error fetching user profile:", res.status, res.statusText);
+        await fallbackToAuthData();
         return;
       }
-      
-      const json: any = await res.json();
+
+      const json = (await res.json()) as any;
+
       if (!json.success || !json.data) {
-        console.error('Error fetching user profile:', json.message);
-        // Fallback to auth data
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) {
-          console.error('Error getting user:', error);
-          return;
-        }
-        
-        if (user) {
-          setUser({
-            id: user.id,
-            email: user.email || '',
-            full_name: user.user_metadata?.full_name,
-            avatar_url: user.user_metadata?.avatar_url || user.identities?.[0]?.identity_data?.avatar_url
-          });
-        }
+        console.error("Error fetching user profile:", json.message);
+        await fallbackToAuthData();
         return;
       }
-      
-      // Set user data from backend response
+
       setUser({
         id: json.data.id || json.data.user_uuid || userId,
-        email: json.data.email || '',
+        email: json.data.email || "",
         full_name: json.data.full_name || json.data.name,
-        avatar_url: json.data.avatar_url || json.data.profile_image
+        avatar_url:
+          json.data.avatar_url ||
+          json.data.profile_image ||
+          json.data.picture, // ✅ handle Google profile pic
       });
-      
-    } catch (err: any) {
-      console.error('Error fetching user profile:', err);
-      // Fallback to auth data
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) {
-          console.error('Error getting user:', error);
-          return;
-        }
-        
-        if (user) {
-          setUser({
-            id: user.id,
-            email: user.email || '',
-            full_name: user.user_metadata?.full_name,
-            avatar_url: user.user_metadata?.avatar_url || user.identities?.[0]?.identity_data?.avatar_url
-          });
-        }
-      } catch (fallbackError) {
-        console.error('Fallback error:', fallbackError);
+    } catch (err) {
+      console.error("Error fetching user profile:", err);
+      await fallbackToAuthData();
+    }
+  };
+
+  // Fallback: get user directly from supabase.auth
+  const fallbackToAuthData = async () => {
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+      if (error) {
+        console.error("Error getting user:", error);
+        return;
       }
+
+      if (user) {
+        setUser({
+          id: user.id,
+          email: user.email || "",
+          full_name: user.user_metadata?.full_name,
+          avatar_url:
+            user.user_metadata?.avatar_url ||
+            user.user_metadata?.picture || // ✅ Google sends picture here
+            user.identities?.[0]?.identity_data?.avatar_url,
+        });
+      }
+    } catch (fallbackError) {
+      console.error("Fallback error:", fallbackError);
     }
   };
 
@@ -146,70 +131,67 @@ export default function Navbar() {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Error signing out:', error);
+        console.error("Error signing out:", error);
         return;
       }
-      
+
       setUser(null);
       setIsUserMenuOpen(false);
-      router.push('/');
+      router.push("/");
     } catch (error) {
-      console.error('Error during sign out:', error);
+      console.error("Error during sign out:", error);
     }
   };
 
-  // Toggle user menu
   const toggleUserMenu = () => {
     setIsUserMenuOpen(!isUserMenuOpen);
     setIsSignInOpen(false);
     setOpen(false);
   };
 
-  // Close menus when clicking outside
+  // Close menus on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      if (isUserMenuOpen && !target.closest('.user-menu-container')) {
+      if (isUserMenuOpen && !target.closest(".user-menu-container")) {
         setIsUserMenuOpen(false);
       }
-      if (isSignInOpen && !target.closest('.sign-in-container')) {
+      if (isSignInOpen && !target.closest(".sign-in-container")) {
         setIsSignInOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isUserMenuOpen, isSignInOpen]);
 
-  // Handle body scroll when mobile menu is open
+  // Prevent body scroll when menu is open
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
     }
-    
     return () => {
       document.body.style.overflow = "";
     };
   }, [open]);
 
-  // Check user session on component mount
+  // Initial load + auth state change listener
   useEffect(() => {
     checkUserSession();
 
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event:any, session:any) => {
-        if (event === 'SIGNED_IN' && session) {
-          await fetchUserProfile(session.user.id);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        await fetchUserProfile(session.user.id);
+      } else if (event === "SIGNED_OUT") {
+        setUser(null);
       }
-    );
+    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -223,11 +205,12 @@ export default function Navbar() {
         transition={{ duration: 0.4, ease: "easeOut" }}
       >
         <div className="mx-auto max-w-7xl px-4">
-          <nav
-            aria-label="Main"
-            className="mt-3 flex h-14 items-center justify-between rounded-2xl border border-black/10 bg-gradient-to-b from-white/70 to-white/40 px-3 shadow-[0_2px_24px_rgba(0,0,0,0.08)] backdrop-blur-xl dark:border-white/10 dark:from-[#111111]/70 dark:to-[#111111]/40"
-          >
-            <Link href="/" className="flex items-center gap-1 rounded-lg px-1 py-1">
+          <nav className="mt-3 flex h-14 items-center justify-between rounded-2xl border border-black/10 bg-gradient-to-b from-white/70 to-white/40 px-3 shadow-[0_2px_24px_rgba(0,0,0,0.08)] backdrop-blur-xl dark:border-white/10 dark:from-[#111111]/70 dark:to-[#111111]/40">
+            {/* Logo */}
+            <Link
+              href="/"
+              className="flex items-center gap-1 rounded-lg px-1 py-1"
+            >
               <Image
                 src={`/assets/logo.png`}
                 alt="Z3RO Logo"
@@ -239,7 +222,7 @@ export default function Navbar() {
               <span className="text-lg font-semibold tracking-tight">Z3RO</span>
             </Link>
 
-            {/* Desktop Navigation Links */}
+            {/* Desktop Links */}
             <ul className="hidden items-center gap-8 md:flex">
               {links.map((l) => (
                 <li key={l.name}>
@@ -253,7 +236,7 @@ export default function Navbar() {
               ))}
             </ul>
 
-            {/* Desktop Auth Section */}
+            {/* Auth Section */}
             <div className="hidden items-center gap-2 md:flex">
               {isLoading ? (
                 <div className="h-8 w-20 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
@@ -263,7 +246,6 @@ export default function Navbar() {
                     type="button"
                     onClick={toggleUserMenu}
                     className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-                    aria-expanded={isUserMenuOpen}
                   >
                     {user.avatar_url ? (
                       <Image
@@ -275,33 +257,34 @@ export default function Navbar() {
                       />
                     ) : (
                       <div className="h-5 w-5 rounded-full bg-green-600 flex items-center justify-center text-white text-xs">
-                        {user.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                        {user.full_name?.charAt(0) ||
+                          user.email.charAt(0).toUpperCase()}
                       </div>
                     )}
                     <span className="max-w-24 truncate">
-                      {user.full_name || user.email.split('@')[0]}
+                      {user.full_name || user.email.split("@")[0]}
                     </span>
                   </button>
 
-                  {/* User Dropdown Menu */}
+                  {/* User Menu */}
                   {isUserMenuOpen && (
                     <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-md border border-gray-200 bg-white py-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
                       <div className="border-b border-gray-100 px-4 py-2 dark:border-gray-700">
                         <p className="font-medium text-gray-900 dark:text-white">
-                          {user.full_name || 'User'}
+                          {user.full_name || "User"}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                           {user.email}
                         </p>
                       </div>
-                      <Link 
-                        href="/account" 
+                      <Link
+                        href="/account"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 dark:text-gray-300 dark:hover:bg-green-900/20"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         My Account
                       </Link>
-                      <button 
+                      <button
                         type="button"
                         onClick={handleSignOut}
                         className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
@@ -313,7 +296,7 @@ export default function Navbar() {
                   )}
                 </div>
               ) : (
-                <button 
+                <button
                   type="button"
                   onClick={toggleSignIn}
                   className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-white/90"
@@ -321,13 +304,15 @@ export default function Navbar() {
                   Sign in
                 </button>
               )}
-                <Link 
-                  href={`/dashboard`}
-                  className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-black hover:bg-white/90 hover:translate-x-[1px] transition"
-                >
-                  Dashboard
-                </Link>
+              <Link
+                href={`/dashboard`}
+                className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-black hover:bg-white/90 hover:translate-x-[1px] transition"
+              >
+                Dashboard
+              </Link>
             </div>
+
+            {/* Mobile menu toggle */}
             <button
               aria-label="Toggle menu"
               aria-expanded={open}
@@ -377,8 +362,8 @@ export default function Navbar() {
                     </motion.li>
                   ))}
                 </ul>
-                
-                {/* Mobile Auth Buttons */}
+
+                {/* Mobile Auth */}
                 <div className="mt-2 p-2">
                   {isLoading ? (
                     <div className="h-12 w-full animate-pulse rounded bg-gray-700" />
@@ -395,27 +380,21 @@ export default function Navbar() {
                           />
                         ) : (
                           <div className="h-6 w-6 rounded-full bg-green-600 flex items-center justify-center text-white text-sm">
-                            {user.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                            {user.full_name?.charAt(0) ||
+                              user.email.charAt(0).toUpperCase()}
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-white truncate">
-                            {user.full_name || 'User'}
+                            {user.full_name || "User"}
                           </p>
                           <p className="text-xs text-gray-400 truncate">
                             {user.email}
                           </p>
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-2">
-                        {/* <Link
-                          href="/account"
-                          onClick={() => setOpen(false)}
-                          className="rounded-xl border border-white/15 px-4 py-3 text-center text-sm font-medium hover:bg-white/5"
-                        >
-                          Account
-                        </Link> */}
                         <button
                           type="button"
                           onClick={() => {
@@ -456,14 +435,17 @@ export default function Navbar() {
         )}
       </AnimatePresence>
 
-      {/* Sign In Modal/Drawer */}
+      {/* Sign In Modal */}
       {isSignInOpen && (
         <div className="sign-in-container">
-          <SignIn isOpen={isSignInOpen} onClose={() => setIsSignInOpen(false)} redirectUrl="/dashboard"/>
+          <SignIn
+            isOpen={isSignInOpen}
+            onClose={() => setIsSignInOpen(false)}
+            redirectUrl="/dashboard"
+          />
         </div>
       )}
 
-      {/* Spacer for fixed header */}
       <div className="h-16" />
     </>
   );
