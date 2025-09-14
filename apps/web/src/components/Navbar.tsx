@@ -137,7 +137,7 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={toggleUserMenu}
-                    className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+                    className="flex items-center gap-2 rounded-md border border-gray-200 text-black bg-white px-2 py-1.25 text-sm font-medium transition-colors"
                     aria-expanded={isUserMenuOpen}
                   >
                     {user.avatar_url ? (
@@ -160,8 +160,8 @@ export default function Navbar() {
 
                   {/* User Dropdown Menu */}
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-md border border-gray-200 bg-white py-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                      <div className="border-b border-gray-100 px-4 py-2 dark:border-gray-700">
+                    <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-md border border-[#171717] bg-[#0f0e0e] py-2 shadow-lg">
+                      <div className="border border-[#171717] px-4 py-2">
                         <p className="font-medium text-gray-900 dark:text-white">
                           {user.full_name || 'User'}
                         </p>
@@ -171,7 +171,7 @@ export default function Navbar() {
                       </div>
                       <Link 
                         href="/account" 
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 dark:text-gray-300 dark:hover:bg-green-900/20"
+                        className="block px-4 py-2 text-sm text-white hover:text-white/80"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         My Account
