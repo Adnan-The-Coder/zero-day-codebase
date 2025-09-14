@@ -34,6 +34,7 @@ ChartJS.register(
 );
 import { supabase } from '@/utils/supabase/client';
 import { API_ENDPOINTS } from '@/config/api';
+import { useUser } from '../../utils/hooks/useUser';
 
 
 type BadgeColor = "red" | "amber" | "green" | "blue" | "neutral";
@@ -1199,12 +1200,6 @@ function exportDashboardSummary(filename: string, analysisData?: {
   printWindow.document.title = filename.replace(/\.pdf$/i, "");
 }
 
-interface UserProfile {
-  id: string;
-  email: string;
-  full_name?: string;
-  avatar_url?: string;
-}
 
 export default function Page() {
   /** ---------- STATE ---------- **/
@@ -1212,121 +1207,19 @@ export default function Page() {
   const phishingScore = 87;
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [mlModelsLoaded, setMlModelsLoaded] = useState(false);
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const { user, loading: userLoading } = useUser();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const isLoading = userLoading;
 
   const router = useRouter();
 
-    // Check if user is already logged in
-    const checkUserSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Error getting session:', error);
-          return;
-        }
-        
-        if (session) {
-          await fetchUserProfile(session.user.id);
-        }
-      } catch (error) {
-        console.error('Error checking user session:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-  
-    const toggleSignIn = () => {
-      setIsSignInOpen(!isSignInOpen);
-      // Close other menus when opening sign-in
-      setIsUserMenuOpen(false);
-      setOpen(false);
-    };
-  
-    // Fetch user profile data
-    const fetchUserProfile = async (userId: string) => {
-      console.log('Fetching user profile for ID:', userId);
-      try {
-        // Use the backend API instead of direct Supabase query
-        const res = await fetch(API_ENDPOINTS.getProfileByUUID(userId), {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        
-        if (!res.ok) {
-          console.error('Error fetching user profile:', res.status, res.statusText);
-          // If profile doesn't exist yet, create a basic one from auth data
-          const { data: { user }, error } = await supabase.auth.getUser();
-          if (error) {
-            console.error('Error getting user:', error);
-            return;
-          }
-          
-          if (user) {
-            setUser({
-              id: user.id,
-              email: user.email || '',
-              full_name: user.user_metadata?.full_name,
-              avatar_url: user.user_metadata?.avatar_url || user.identities?.[0]?.identity_data?.avatar_url
-            });
-          }
-          return;
-        }
-        
-        const json: any = await res.json();
-        if (!json.success || !json.data) {
-          console.error('Error fetching user profile:', json.message);
-          // Fallback to auth data
-          const { data: { user }, error } = await supabase.auth.getUser();
-          if (error) {
-            console.error('Error getting user:', error);
-            return;
-          }
-          
-          if (user) {
-            setUser({
-              id: user.id,
-              email: user.email || '',
-              full_name: user.user_metadata?.full_name,
-              avatar_url: user.user_metadata?.avatar_url || user.identities?.[0]?.identity_data?.avatar_url
-            });
-          }
-          return;
-        }
-        
-        // Set user data from backend response
-        setUser({
-          id: json.data.id || json.data.user_uuid || userId,
-          email: json.data.email || '',
-          full_name: json.data.full_name || json.data.name,
-          avatar_url: json.data.avatar_url || json.data.profile_image
-        });
-        
-      } catch (err: any) {
-        console.error('Error fetching user profile:', err);
-        // Fallback to auth data
-        try {
-          const { data: { user }, error } = await supabase.auth.getUser();
-          if (error) {
-            console.error('Error getting user:', error);
-            return;
-          }
-          
-          if (user) {
-            setUser({
-              id: user.id,
-              email: user.email || '',
-              full_name: user.user_metadata?.full_name,
-              avatar_url: user.user_metadata?.avatar_url || user.identities?.[0]?.identity_data?.avatar_url
-            });
-          }
-        } catch (fallbackError) {
-          console.error('Fallback error:', fallbackError);
-        }
-      }
-    };
+  const toggleSignIn = () => {
+    setIsSignInOpen(!isSignInOpen);
+    // Close other menus when opening sign-in
+    setIsUserMenuOpen(false);
+    setOpen(false);
+  };
   
     // Handle sign out
     const handleSignOut = async () => {
@@ -1337,7 +1230,6 @@ export default function Page() {
           return;
         }
         
-        setUser(null);
         setIsUserMenuOpen(false);
         router.push('/');
       } catch (error) {
