@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React, { useState, useEffect, useRef } from 'react';
 
 interface Question {
@@ -519,16 +520,17 @@ export default function CyberSecurityGame() {
       <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
         <MatrixBackground />
         <div className="max-w-4xl w-full">
-          <div className="text-center mb-8">
-            <h1 className="text-6xl font-bold text-white mb-4">
-              ⚡ Cyber Defense Academy
+          <div className="text-center mb-8 flex flex-col items-center">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 flex flex-row items-center">
+            <Image src="/assets/logo.png" alt="logo" width={10000} height={10000} className="w-12 h-12 md:w-16 md:h-16" />
+                Z3RO Academy
             </h1>
-            <p className="text-xl text-white mb-8 animate-bounce">
+            <p className="text-sm text-white mb-8">
               Master cybersecurity concepts through interactive gameplay!
             </p>
           </div>
 
-          <div className="bg-black border border-white rounded-2xl p-8">
+          <div className="bg-black/20 backdrop-blur-md border border-white/30 rounded-2xl p-8">
             <div className="mb-6">
               <label className="block text-lg font-semibold text-white mb-2">
                 Enter Your Name:
@@ -537,7 +539,7 @@ export default function CyberSecurityGame() {
                 type="text"
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
-                className="w-full p-3 bg-black border border-white rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white"
+                className="w-full p-3 bg-black/20 backdrop-blur-sm border border-white/30 rounded-lg text-white focus:outline-none"
                 placeholder="Your name here..."
                 maxLength={20}
               />
@@ -545,14 +547,14 @@ export default function CyberSecurityGame() {
 
             <button
               onClick={startGame}
-              className="w-full bg-white text-black hover:bg-black hover:text-white hover:border-white border border-black font-bold py-4 px-8 rounded-lg text-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-white/25 animate-pulse"
+              className="w-full bg-white/10 hover:bg-white/15 backdrop-blur-sm text-white border border-white/30 font-bold py-4 px-8 rounded-lg text-md"
             >
               ▶ Start Cyber Training
             </button>
 
             <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
               {CATEGORIES.map((category, index) => (
-                <div key={index} className={`${category.color} p-4 rounded-lg text-center transform transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-white/10 animate-fade-in`} style={{ animationDelay: `${index * 0.1}s` }}>
+                <div key={index} className="bg-black/20 backdrop-blur-sm border border-white/30 p-4 rounded-lg text-center text-white">
                   <div className="text-2xl mb-2">{category.icon}</div>
                   <div className="text-sm font-semibold">{category.name}</div>
                 </div>
@@ -592,7 +594,7 @@ export default function CyberSecurityGame() {
           {achievements.slice(-3).map((achievement, index) => (
             <div
               key={achievement}
-              className="fixed top-4 right-4 bg-white text-black px-4 py-2 rounded-lg shadow-lg animate-bounce"
+              className="fixed top-4 right-4 bg-white/10 backdrop-blur-sm text-white border border-white/30 px-4 py-2 rounded-lg animate-bounce"
               style={{ 
                 zIndex: 1000,
                 animationDelay: `${index * 0.2}s`,
@@ -604,10 +606,10 @@ export default function CyberSecurityGame() {
           ))}
           
           {/* Header */}
-          <div className="bg-black border border-white rounded-xl p-4 mb-6 transform transition-all duration-300 hover:scale-105">
+          <div className="bg-black/20 backdrop-blur-md border border-white/30 rounded-xl p-4 mb-6">
             <div className="flex justify-between items-center mb-4">
               <div className="text-white">
-                <h2 className="text-2xl font-bold">Player: {playerName}</h2>
+                <h2 className="text-2xl font-bold">{playerName}</h2>
                 <p className="text-white">Question {gameState.currentQuestion + 1} of {shuffledQuestions.length}</p>
               </div>
               <div className="text-right text-white">
@@ -627,15 +629,13 @@ export default function CyberSecurityGame() {
                   ))}
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-white">Time:</span>
-                  <span className={`text-xl font-bold ${gameState.timeRemaining <= 10 ? 'text-white' : 'text-white'}`}>
+                  <span className={`text-md font-bold ${gameState.timeRemaining <= 10 ? 'text-white' : 'text-white'}`}>
                     {gameState.timeRemaining}s
                   </span>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm text-white">Progress</div>
-                <div className="w-32 bg-black border border-white rounded-full h-2">
+                <div className="w-32 bg-black/20 backdrop-blur-sm border border-white/30 rounded-full h-2">
                   <div 
                     className="bg-white h-2 rounded-full transition-all duration-300"
                     style={{ width: `${progress}%` }}
@@ -646,9 +646,9 @@ export default function CyberSecurityGame() {
           </div>
 
           {/* Question Card */}
-          <div className="bg-black border border-white rounded-2xl p-8 mb-6">
+          <div className="bg-black/20 backdrop-blur-md border border-white/30 rounded-2xl p-8 mb-6">
             <div className="flex justify-between items-center mb-6">
-              <div className={`px-4 py-2 rounded-full text-sm font-semibold ${getDifficultyColor(currentQ.difficulty)} bg-black border border-white`}>
+              <div className="px-4 py-2 rounded-full text-sm font-semibold text-white bg-black/20 backdrop-blur-sm border border-white/30">
                 {currentQ.difficulty.toUpperCase()}
               </div>
               <div className="flex items-center space-x-2 text-white">
@@ -664,18 +664,18 @@ export default function CyberSecurityGame() {
 
             <div className="grid gap-4">
               {currentQ.options.map((option, index) => {
-                let buttonClass = "w-full p-4 text-left rounded-lg border-2 transition-all duration-300 font-semibold ";
+                let buttonClass = "w-full p-4 text-left rounded-lg border-2 font-semibold ";
                 
                 if (selectedAnswer !== null) {
                   if (index === currentQ.correctAnswer) {
-                    buttonClass += "border-white bg-white text-black";
+                    buttonClass += "border-green-500 bg-green-500/20 text-green-300";
                   } else if (index === selectedAnswer && index !== currentQ.correctAnswer) {
-                    buttonClass += "border-black bg-black text-white";
+                    buttonClass += "border-red-500 bg-red-500/20 text-red-300";
                   } else {
-                    buttonClass += "border-white bg-black text-white";
+                    buttonClass += "border-white/30 bg-black/20 text-white/50";
                   }
                 } else {
-                  buttonClass += "border-white bg-black text-white hover:border-black hover:bg-white hover:text-black hover:scale-105 hover:shadow-lg hover:shadow-white/10";
+                  buttonClass += "border-white/30 bg-black/20 backdrop-blur-sm text-white";
                 }
 
                 return (
@@ -693,7 +693,7 @@ export default function CyberSecurityGame() {
             </div>
 
             {showExplanation && (
-              <div className="mt-6 p-4 bg-black border border-white rounded-lg">
+              <div className="mt-6 p-4 bg-black/20 backdrop-blur-sm border border-white/30 rounded-lg">
                 <h4 className="text-lg font-bold text-white mb-2">◈ Explanation:</h4>
                 <p className="text-white">{currentQ.explanation}</p>
               </div>
@@ -709,28 +709,28 @@ export default function CyberSecurityGame() {
       <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
         <MatrixBackground />
         <div className="max-w-2xl w-full relative" style={{ zIndex: 2 }}>
-          <div className="bg-black border border-white rounded-2xl p-8 text-center transform transition-all duration-500 hover:scale-105">
+          <div className="bg-black/20 backdrop-blur-md border border-white/30 rounded-2xl p-8 text-center">
             <div className="text-6xl mb-4 animate-bounce">◉</div>
             <h1 className="text-4xl font-bold text-white mb-4 animate-pulse">Training Complete!</h1>
             <h2 className="text-2xl font-bold text-white mb-6 animate-fade-in">{getScoreMessage()}</h2>
             
-            <div className="bg-white border border-black rounded-xl p-6 mb-6">
-              <div className="grid grid-cols-2 gap-4 text-black">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-6 mb-6">
+              <div className="grid grid-cols-2 gap-4 text-white">
                 <div>
-                  <div className="text-3xl font-bold text-black">{gameState.score}</div>
-                  <div className="text-black">Final Score</div>
+                  <div className="text-3xl font-bold text-white">{gameState.score}</div>
+                  <div className="text-white">Final Score</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-black">{gameState.currentQuestion}</div>
-                  <div className="text-black">Questions Answered</div>
+                  <div className="text-3xl font-bold text-white">{gameState.currentQuestion}</div>
+                  <div className="text-white">Questions Answered</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-black">{3 - gameState.lives}</div>
-                  <div className="text-black">Lives Lost</div>
+                  <div className="text-3xl font-bold text-white">{3 - gameState.lives}</div>
+                  <div className="text-white">Lives Lost</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-black">{gameState.streak}</div>
-                  <div className="text-black">Best Streak</div>
+                  <div className="text-3xl font-bold text-white">{gameState.streak}</div>
+                  <div className="text-white">Best Streak</div>
                 </div>
               </div>
             </div>
@@ -738,7 +738,7 @@ export default function CyberSecurityGame() {
             <div className="space-y-4">
               <button
                 onClick={resetGame}
-                className="w-full bg-white text-black hover:bg-black hover:text-white hover:border-white border border-black font-bold py-4 px-8 rounded-lg text-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-white/25 animate-pulse"
+                className="w-full bg-white/10 backdrop-blur-sm text-white border border-white/30 font-bold py-4 px-8 rounded-lg text-md"
               >
                 ◀ Play Again
               </button>
