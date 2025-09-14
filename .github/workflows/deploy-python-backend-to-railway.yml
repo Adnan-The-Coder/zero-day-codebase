@@ -106,7 +106,7 @@ jobs:
       working-directory: ${{ env.WORKING_DIRECTORY }}
       run: |
         if [ -n "${{ secrets.RAILWAY_PROJECT_ID }}" ]; then
-          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
           echo "✅ Linked to existing project: ${{ secrets.RAILWAY_PROJECT_ID }}"
         else
           echo "ℹ️ No project ID provided, using railway.json or creating new project"
@@ -202,6 +202,6 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 🔍 Common Issues:" >> $GITHUB_STEP_SUMMARY
         echo "- Missing \`RAILWAY_TOKEN\` secret" >> $GITHUB_STEP_SUMMARY
-        echo "- Invalid Railway project configuration" >> $GITHUB_STEP_SUMMARY
+        echo "- Missing or invalid \`RAILWAY_PROJECT_ID\` secret" >> $GITHUB_STEP_SUMMARY
         echo "- Application startup issues" >> $GITHUB_STEP_SUMMARY
         echo "- Model files not found" >> $GITHUB_STEP_SUMMARY
