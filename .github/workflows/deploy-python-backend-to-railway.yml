@@ -3,7 +3,7 @@ name: 🚂 Deploy to Railway
 
 on:
   push:
-    branches: 
+    branches:
       - main
       - production
   workflow_dispatch:
@@ -13,199 +13,237 @@ on:
         required: true
         default: 'production'
         type: choice
-        options:
-          - production
-          - staging
+        options: [production, staging]
 
 env:
   WORKING_DIRECTORY: apps/python-backend
 
 jobs:
-  # Build and Test Job
   test:
     name: 🧪 Test & Build
     runs-on: ubuntu-latest
     outputs:
       should-deploy: ${{ steps.changes.outputs.backend }}
-      
     steps:
-    - name: 📥 Checkout repository
-      uses: actions/checkout@v4
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
 
-    - name: 🔍 Check for backend changes
-      uses: dorny/paths-filter@v2
-      id: changes
-      with:
-        filters: |
-          backend:
-            - 'apps/python-backend/**'
+      - name: 🔍 Check for backend changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            backend:
+              - 'apps/python-backend/**'
 
-    - name: 🐍 Set up Python
-      if: steps.changes.outputs.backend == 'true'
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip'
+      - name: 🐍 Set up Python
+        if: steps.changes.outputs.backend == 'true'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
 
-    - name: 📦 Install dependencies
-      if: steps.changes.outputs.backend == 'true'
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest flake8
+      - name: 📦 Install dependencies
+        if: steps.changes.outputs.backend == 'true'
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest flake8
 
-    - name: 🔍 Lint with flake8
-      if: steps.changes.outputs.backend == 'true'
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: |
-        # Ignore F824 (unused global) to unblock pipeline
-        flake8 app/ main.py --count --select=E9,F63,F7,F82 --ignore=F824 --show-source --statistics
-        flake8 app/ main.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: 🔍 Lint with flake8
+        if: steps.changes.outputs.backend == 'true'
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          # Ignore F824 (unused global) to unblock pipeline
+          flake8 app/ main.py --count --select=E9,F63,F7,F82 --ignore=F824 --show-source --statistics
+          flake8 app/ main.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    - name: 🐳 Test Docker build
-      if: steps.changes.outputs.backend == 'true'
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: |
-        docker build -t ml-backend:test .
-        echo "✅ Docker build successful"
+      - name: 🐳 Test Docker build
+        if: steps.changes.outputs.backend == 'true'
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          docker build -t ml-backend:test .
+          echo "✅ Docker build successful"
 
-  # Deploy to Railway
   deploy:
     name: 🚀 Deploy to Railway
     runs-on: ubuntu-latest
     needs: test
     if: needs.test.outputs.should-deploy == 'true'
-    environment: 
+    environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
       url: ${{ steps.deploy.outputs.url }}
 
     steps:
-    - name: 📥 Checkout repository
-      uses: actions/checkout@v4
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
 
-    - name: 🛤️ Install Railway CLI
-      run: |
-        npm install -g @railway/cli
-        railway --version
+      - name: 🛤️ Install Railway CLI
+        run: |
+          npm install -g @railway/cli
+          railway --version
 
-    - name: 🔐 Railway Authentication
-      env:
-        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      run: |
-        if [ -z "$RAILWAY_TOKEN" ]; then
-          echo "❌ RAILWAY_TOKEN secret is not set"
-          echo "🔧 Get your token from: https://railway.app/account/tokens"
-          exit 1
-        fi
-        echo "✅ Railway token configured"
-        # Railway CLI automatically authenticates when RAILWAY_TOKEN is set
-        echo "🔐 Authentication will be handled automatically by Railway CLI"
-
-    - name: 🔗 Link Railway Project
-      env:
-        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: |
-        if [ -n "${{ secrets.RAILWAY_PROJECT_ID }}" ]; then
-          echo "🔗 Linking to Railway project: ${{ secrets.RAILWAY_PROJECT_ID }}"
-          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
-          echo "✅ Linked to existing project: ${{ secrets.RAILWAY_PROJECT_ID }}"
-        else
-          echo "ℹ️ No PROJECT_ID provided, falling back to railway.json"
-          railway link || true
-        fi
-
-    - name: 🚀 Deploy to Railway
-      id: deploy
-      env:
-        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: |
-        echo "🚀 Starting Railway deployment..."
-        
-        # Set environment variables if provided
-        if [ -n "${{ secrets.RAILWAY_ENVIRONMENT_VARS }}" ]; then
-          echo "⚙️ Setting environment variables..."
-          railway variables --json '${{ secrets.RAILWAY_ENVIRONMENT_VARS }}'
-        fi
-        
-        # Deploy the application
-        railway up --detach
-        
-        # Get the deployment URL
-        RAILWAY_URL=$(railway status --json | jq -r '.deployments[0].url // "https://your-app.railway.app"')
-        echo "url=$RAILWAY_URL" >> $GITHUB_OUTPUT
-        echo "✅ Deployment completed successfully!"
-        echo "🌐 Application URL: $RAILWAY_URL"
-
-    - name: 🏥 Health Check
-      id: health-check
-      run: |
-        echo "🏥 Performing health check..."
-        URL="${{ steps.deploy.outputs.url }}"
-        
-        # Wait for deployment to be ready
-        echo "⏳ Waiting for deployment to be ready..."
-        sleep 60
-        
-        # Perform health check with retries
-        for i in {1..10}; do
-          echo "🔍 Health check attempt $i/10..."
-          
-          if curl -f --connect-timeout 10 --max-time 30 "$URL/health"; then
-            echo "✅ Health check passed!"
-            
-            # Test the main API endpoint
-            if curl -f -X POST "$URL/api/v1/spam/classify" \
-              -H "Content-Type: application/json" \
-              -d '{"text":"test message"}' \
-              --connect-timeout 10 --max-time 30; then
-              echo "✅ API endpoint test passed!"
-            else
-              echo "⚠️ API endpoint test failed, but health check passed"
-            fi
-            break
-          else
-            echo "❌ Health check failed, retrying in 30 seconds..."
-            if [ $i -eq 10 ]; then
-              echo "❌ Health check failed after 10 attempts"
-              exit 1
-            fi
-            sleep 30
+      - name: 🔐 Verify non-interactive auth
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "❌ RAILWAY_TOKEN secret is not set"
+            echo "🔧 Use a *Project Token* (Project → Settings → Tokens) and add as RAILWAY_TOKEN"
+            exit 1
           fi
-        done
+          # Sanity check auth without interactive login
+          if ! railway whoami > /dev/null 2>&1; then
+            echo "❌ Railway auth failed with provided RAILWAY_TOKEN (must be a *Project Token*)"
+            exit 1
+          fi
+          echo "✅ Railway token detected"
 
-    - name: 📊 Deployment Summary
-      run: |
-        echo "## 🚀 Railway Deployment Summary" >> $GITHUB_STEP_SUMMARY
-        echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
-        echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
-        echo "| 🌐 **URL** | ${{ steps.deploy.outputs.url }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| 🏷️ **Environment** | ${{ github.ref == 'refs/heads/main' && 'Production' || 'Staging' }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| 📝 **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| 👤 **Deployed by** | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| ⏰ **Deploy Time** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
-        echo "- [Health Check](${{ steps.deploy.outputs.url }}/health)" >> $GITHUB_STEP_SUMMARY
-        echo "- [API Docs](${{ steps.deploy.outputs.url }}/docs)" >> $GITHUB_STEP_SUMMARY
-        echo "- [Railway Dashboard](https://railway.app/dashboard)" >> $GITHUB_STEP_SUMMARY
+      - name: 📐 Compute environment flags
+        id: envsel
+        env:
+          INPUT_ENV: ${{ github.event.inputs.environment }}
+          REF: ${{ github.ref }}
+          R_ENV: ${{ secrets.RAILWAY_ENVIRONMENT }}
+        run: |
+          # Choose environment: workflow_dispatch input > secret > branch heuristic
+          if [ -n "$INPUT_ENV" ]; then
+            ENV_NAME="$INPUT_ENV"
+          elif [ -n "$R_ENV" ]; then
+            ENV_NAME="$R_ENV"
+          else
+            if [ "$REF" = "refs/heads/main" ]; then ENV_NAME="production"; else ENV_NAME="staging"; fi
+          fi
+          echo "env_name=$ENV_NAME" >> "$GITHUB_OUTPUT"
 
-  # Notify on failure
+      - name: 🔗 Link (project/env/service) for this dir
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
+          ENV_NAME: ${{ steps.envsel.outputs.env_name }}
+        run: |
+          if [ -z "$RAILWAY_PROJECT_ID" ]; then
+            echo "❌ RAILWAY_PROJECT_ID secret is not set"
+            exit 1
+          fi
+
+          # Link directory to project + environment + (optional) service
+          set -e
+          if [ -n "$RAILWAY_SERVICE" ]; then
+            railway link --project "$RAILWAY_PROJECT_ID" --environment "$ENV_NAME" --service "$RAILWAY_SERVICE"
+            echo "✅ Linked project:$RAILWAY_PROJECT_ID env:$ENV_NAME service:$RAILWAY_SERVICE"
+          else
+            railway link --project "$RAILWAY_PROJECT_ID" --environment "$ENV_NAME"
+            echo "✅ Linked project:$RAILWAY_PROJECT_ID env:$ENV_NAME"
+          fi
+
+      - name: ⚙️ Set environment variables (if provided)
+        if: ${{ secrets.RAILWAY_ENVIRONMENT_VARS != '' }}
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_ENVIRONMENT_VARS: ${{ secrets.RAILWAY_ENVIRONMENT_VARS }}
+          ENV_NAME: ${{ steps.envsel.outputs.env_name }}
+        run: |
+          echo "⚙️ Applying environment variables to env: $ENV_NAME"
+          echo "$RAILWAY_ENVIRONMENT_VARS" | jq -r 'to_entries[] | "\(.key)=\(.value)"' | while read -r kv; do
+            echo "  • $kv"
+            railway variables --environment "$ENV_NAME" --set "$kv"
+          done
+          echo "✅ Variables updated"
+
+      - name: 🚀 Deploy to Railway
+        id: deploy
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          ENV_NAME: ${{ steps.envsel.outputs.env_name }}
+          RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
+        run: |
+          echo "🚀 Starting Railway deployment..."
+          set -e
+
+          # Prefer explicit flags to avoid any interactive prompts
+          if [ -n "$RAILWAY_SERVICE" ]; then
+            railway up --detach --project "$RAILWAY_PROJECT_ID" --environment "$ENV_NAME" --service "$RAILWAY_SERVICE"
+          else
+            railway up --detach --project "$RAILWAY_PROJECT_ID" --environment "$ENV_NAME"
+          fi
+
+          # Try to discover URL from status JSON
+          URL=$(railway status --json | jq -r '.services[]?.domain // .project.domain // empty' | head -n1)
+          if [ -z "$URL" ]; then
+            # Fallback default if CLI doesn’t return domain
+            URL="https://$RAILWAY_PROJECT_ID.railway.app"
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "🌐 Application URL: $URL"
+          echo "✅ Deployment completed successfully!"
+
+      - name: 🏥 Health Check
+        id: health-check
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          echo "🏥 Performing health check..."
+          echo "⏳ Waiting for deployment warm-up..."
+          sleep 60
+
+          for i in {1..10}; do
+            echo "🔍 Health check attempt $i/10..."
+            if curl -fsS --connect-timeout 10 --max-time 30 "$URL/health"; then
+              echo "✅ Health check passed!"
+              if curl -fsS -X POST "$URL/api/v1/spam/classify" \
+                   -H "Content-Type: application/json" \
+                   -d '{"text":"test message"}' \
+                   --connect-timeout 10 --max-time 30; then
+                echo "✅ API endpoint test passed!"
+              else
+                echo "⚠️ API endpoint test failed, but health check passed"
+              fi
+              exit 0
+            else
+              echo "❌ Health check failed, retrying in 30s..."
+              sleep 30
+            fi
+          done
+
+          echo "❌ Health check failed after 10 attempts"
+          exit 1
+
+      - name: 📊 Deployment Summary
+        run: |
+          echo "## 🚀 Railway Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🌐 **URL** | ${{ steps.deploy.outputs.url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🏷️ **Environment** | ${{ steps.envsel.outputs.env_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📝 **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 👤 **Deployed by** | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⏰ **Deploy Time** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [Health Check](${{ steps.deploy.outputs.url }}/health)" >> $GITHUB_STEP_SUMMARY
+          echo "- [API Docs](${{ steps.deploy.outputs.url }}/docs)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Railway Dashboard](https://railway.app/dashboard)" >> $GITHUB_STEP_SUMMARY
+
   notify-failure:
     name: 📢 Notify on Failure
     runs-on: ubuntu-latest
     needs: [test, deploy]
     if: failure()
     steps:
-    - name: 📢 Deployment Failed
-      run: |
-        echo "## ❌ Railway Deployment Failed" >> $GITHUB_STEP_SUMMARY
-        echo "The deployment to Railway has failed. Please check the logs above for details." >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🔍 Common Issues:" >> $GITHUB_STEP_SUMMARY
-        echo "- Missing \`RAILWAY_TOKEN\` secret" >> $GITHUB_STEP_SUMMARY
-        echo "- Missing or invalid \`RAILWAY_PROJECT_ID\` secret" >> $GITHUB_STEP_SUMMARY
-        echo "- Application startup issues" >> $GITHUB_STEP_SUMMARY
-        echo "- Model files not found" >> $GITHUB_STEP_SUMMARY
+      - name: 📢 Deployment Failed
+        run: |
+          echo "## ❌ Railway Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "The deployment to Railway has failed. Please check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔍 Common Issues:" >> $GITHUB_STEP_SUMMARY
+          echo "- Missing or wrong \`RAILWAY_TOKEN\` (must be a *Project Token*)" >> $GITHUB_STEP_SUMMARY
+          echo "- Missing or invalid \`RAILWAY_PROJECT_ID\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Wrong \`RAILWAY_SERVICE\` or environment name" >> $GITHUB_STEP_SUMMARY
+          echo "- Application startup issues (bad PORT, health route, etc.)" >> $GITHUB_STEP_SUMMARY
