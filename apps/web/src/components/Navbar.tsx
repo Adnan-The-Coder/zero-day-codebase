@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import SignIn from './auth/Sign-in';
 import { API_ENDPOINTS } from '@/config/api';
 
-import { supabase } from '../utils/supabase/client';
+import { supabase } from '@/utils/supabase/client';
 import { LogOut } from "lucide-react";
 
 interface UserProfile {
@@ -301,13 +301,6 @@ export default function Navbar() {
                       >
                         My Account
                       </Link>
-                      <Link 
-                        href="/orders" 
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 dark:text-gray-300 dark:hover:bg-green-900/20"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        My Orders
-                      </Link>
                       <button 
                         type="button"
                         onClick={handleSignOut}
@@ -416,13 +409,13 @@ export default function Navbar() {
                       </div>
                       
                       <div className="grid grid-cols-2 gap-2">
-                        <Link
+                        {/* <Link
                           href="/account"
                           onClick={() => setOpen(false)}
                           className="rounded-xl border border-white/15 px-4 py-3 text-center text-sm font-medium hover:bg-white/5"
                         >
                           Account
-                        </Link>
+                        </Link> */}
                         <button
                           type="button"
                           onClick={() => {

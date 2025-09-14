@@ -315,7 +315,7 @@ const SignIn: React.FC<SignInProps> = ({ isOpen, onClose, redirectUrl }) => {
               <div className="relative size-16">
                 <Image
                   src="/assets/logo.png"
-                  alt="Plantomart Logo"
+                  alt="logo"
                   fill
                   className="object-contain"
                   priority
