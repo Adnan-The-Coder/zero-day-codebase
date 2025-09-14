@@ -6,7 +6,8 @@ import {
     getUserOrganizations,
     updateVendors,
     deleteVendors,
-    deleteOrganization
+    deleteOrganization,
+    getOrganizationVendors
 } from '../controllers/supply-chain';
 
 const supplyChainRoutes = new Hono();
@@ -21,5 +22,6 @@ supplyChainRoutes.delete('/organization/delete', deleteOrganization);
 // Vendor management routes
 supplyChainRoutes.put('/vendors/update', updateVendors);
 supplyChainRoutes.delete('/vendors/delete', deleteVendors);
+supplyChainRoutes.get('/vendors/get', getOrganizationVendors);
 
 export default supplyChainRoutes;

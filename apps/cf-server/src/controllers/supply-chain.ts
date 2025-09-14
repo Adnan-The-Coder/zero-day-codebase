@@ -201,6 +201,51 @@ export const getOrganization = async (c: Context) => {
   }
 };
 
+// Get all vendors for an organization by organizationID
+export const getOrganizationVendors = async (c: Context) => {
+  try {
+    const db = drizzle(c.env.DB);
+    const organizationID = c.req.query('organizationID');
+
+    if (!organizationID) {
+      return c.json({ 
+        success: false, 
+        message: 'organizationID query parameter is required.' 
+      }, 400);
+    }
+
+    const organization = await db
+      .select()
+      .from(supplyChainEntries)
+      .where(eq(supplyChainEntries.organizationID, organizationID))
+      .limit(1);
+
+    if (organization.length === 0) {
+      return c.json({ 
+        success: false, 
+        message: 'Organization not found.' 
+      }, 404);
+    }
+
+    const vendors = organization[0].vendors 
+      ? JSON.parse(organization[0].vendors) 
+      : [];
+
+    return c.json({
+      success: true,
+      organizationID,
+      vendors
+    });
+
+  } catch (error) {
+    console.error('Get organization vendors error:', error);
+    return c.json({ 
+      success: false, 
+      message: 'Internal server error. Please try again later.' 
+    }, 500);
+  }
+};
+
 // Get all organizations for a user
 export const getUserOrganizations = async (c: Context) => {
   try {
