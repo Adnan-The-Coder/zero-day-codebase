@@ -66,7 +66,7 @@ export default function SupplyChainMapping({ onExport }: SupplyChainMappingProps
     const fetchThreatIntel = async () => {
       try {
         const res = await fetch(
-          `https://otx.alienvault.com/api/v1/search/pulses?q=supply chain&limit=8`,
+          `https://otx.alienvault.com/api/v1/search/pulses?q=supplychain&limit=8`,
           {
             headers: {
               "X-OTX-API-KEY":
