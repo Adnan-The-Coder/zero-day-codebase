@@ -283,6 +283,47 @@ export const getUserOrganizations = async (c: Context) => {
   }
 };
 
+export const getOrganizationsByUUID = async (c: Context) => {
+  try {
+    const db = drizzle(c.env.DB);
+    const user_uuid = c.req.query('user_uuid');
+
+    if (!user_uuid) {
+      return c.json({ 
+        success: false, 
+        message: 'user_uuid query parameter is required.' 
+      }, 400);
+    }
+
+    const organizations = await db
+      .select({ organizationID: supplyChainEntries.organizationID })
+      .from(supplyChainEntries)
+      .where(eq(supplyChainEntries.user_uuid, user_uuid));
+
+    if (organizations.length === 0) {
+      return c.json({ 
+        success: false, 
+        message: 'No organizations found for the given user_uuid.' 
+      }, 404);
+    }
+
+    // Extract just the organizationIDs
+    const organizationIDs = organizations.map(org => org.organizationID);
+
+    return c.json({
+      success: true,
+      data: organizationIDs
+    });
+
+  } catch (error) {
+    console.error('Get organizations by UUID error:', error);
+    return c.json({ 
+      success: false, 
+      message: 'Internal server error. Please try again later.' 
+    }, 500);
+  }
+};
+
 // Add or update vendors for an organization
 export const updateVendors = async (c: Context) => {
   try {
