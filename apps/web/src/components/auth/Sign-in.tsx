@@ -436,7 +436,7 @@ const SignIn: React.FC<SignInProps> = ({ isOpen, onClose, redirectUrl }) => {
                 <div className="w-full border-t border-gray-300"></div>
               </div>
               <div className="relative flex justify-center text-sm rounded-xl">
-                <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                <span className="bg-white px-2 text-gray-500 rounded-lg">Or continue with</span>
               </div>
             </div>
             <div className="mt-6">
