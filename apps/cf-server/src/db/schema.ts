@@ -70,3 +70,22 @@ export const phishingMails = sqliteTable("phishingMails", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+
+export const supplyChainEntries = sqliteTable("supplyChainEntries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  user_uuid: text("user_uuid")
+    .notNull()
+    .references(() => userProfiles.uuid, {
+      onDelete: "cascade",
+      onUpdate: "cascade",
+    }),
+    organization_name: text("organization_name").notNull(),
+    userRole : text("userRole").notNull(),
+    organizationID: text("organizationID").notNull(),
+    vendors: text("vendors"), // Store as JSON string
+    createdAt: text("createdAt")  
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updatedAt"),
+    details: text("details"),
+});

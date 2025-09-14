@@ -6,6 +6,7 @@ import { requestId } from "hono/request-id";
 import contactRoutes from "./routes/contact";
 import userRoutes from "./routes/user";
 import phishingmailroutes from "./routes/phishingmails";
+import supplyChainRoutes from "./routes/supply-chain-entry";
 
 
 interface CloudflareBindings {
@@ -227,5 +228,6 @@ app.get("/status", (c) => {
 app.route("/contact", contactRoutes);
 app.route("/users", userRoutes);
 app.route("/phishing", phishingmailroutes);
+app.route('/supplychain',supplyChainRoutes);
 
 export default app;

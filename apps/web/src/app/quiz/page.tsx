@@ -1,5 +1,6 @@
 'use client';
 
+import Navbar from '@/components/Navbar';
 import Image from 'next/image';
 import React, { useState, useEffect, useRef } from 'react';
 
@@ -706,6 +707,8 @@ export default function CyberSecurityGame() {
 
   if (gameState.gamePhase === 'results') {
     return (
+      <>
+      <Navbar/>
       <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
         <MatrixBackground />
         <div className="max-w-2xl w-full relative" style={{ zIndex: 2 }}>
@@ -751,6 +754,7 @@ export default function CyberSecurityGame() {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
