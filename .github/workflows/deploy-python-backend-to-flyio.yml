@@ -1,0 +1,304 @@
+# .github/workflows/deploy-render.yml
+name: 🎨 Deploy to Render
+
+on:
+  push:
+    branches: 
+      - main
+      - production
+    paths:
+      - 'apps/python-backend/**'
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deployment even if no changes detected'
+        required: false
+        default:  false
+        type: boolean
+
+env:
+  WORKING_DIRECTORY: apps/python-backend
+
+jobs:
+  # Build and Test Job
+  test:
+    name: 🧪 Test & Build
+    runs-on: ubuntu-latest
+    outputs:
+      should-deploy: ${{ steps.changes.outputs.backend || github.event.inputs.force_deploy == 'true' }}
+      
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🔍 Check for backend changes
+      uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          backend:
+            - 'apps/python-backend/**'
+
+    - name: 🐍 Set up Python 3.11
+      if: steps.changes.outputs.backend == 'true' || github.event.inputs.force_deploy == 'true'
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/requirements.txt'
+
+    - name: 📦 Install dependencies
+      if: steps.changes.outputs.backend == 'true' || github.event.inputs.force_deploy == 'true'
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest flake8 pytest-cov
+
+    - name: 🔍 Lint with flake8
+      if: steps.changes.outputs.backend == 'true' || github.event.inputs.force_deploy == 'true'
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 app/ main.py --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 app/ main.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: 🧪 Run tests with coverage
+      if: steps.changes.outputs.backend == 'true' || github.event.inputs.force_deploy == 'true'
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+      run: |
+        python -m pytest tests/ -v --tb=short --cov=app --cov-report=term-missing
+
+    - name: 🐳 Validate Docker build
+      if: steps.changes.outputs.backend == 'true' || github.event.inputs.force_deploy == 'true'
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+      run: |
+        echo "🐳 Building Docker image for validation..."
+        docker build -t ml-backend:test .
+        
+        # Test if container starts properly
+        echo "🧪 Testing container startup..."
+        docker run --rm -d --name test-container -p 8001:8000 ml-backend:test
+        
+        # Wait for container to be ready
+        sleep 15
+        
+        # Test health endpoint
+        if curl -f http://localhost:8001/health; then
+          echo "✅ Container health check passed"
+        else
+          echo "❌ Container health check failed"
+          docker logs test-container
+          exit 1
+        fi
+        
+        # Cleanup
+        docker stop test-container || true
+        echo "✅ Docker validation completed"
+
+  # Deploy to Render
+  deploy:
+    name: 🚀 Deploy to Render
+    runs-on: ubuntu-latest
+    needs: test
+    if: needs.test.outputs.should-deploy == 'true'
+    environment: 
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+      url: ${{ vars.RENDER_APP_URL || 'https://your-app.onrender.com' }}
+
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🔐 Validate Render secrets
+      run: |
+        if [ -z "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+          echo "❌ RENDER_DEPLOY_HOOK secret is required"
+          echo "🔧 Get your deploy hook from Render Dashboard → Settings → Deploy Hook"
+          echo "📝 Add it as a repository secret: RENDER_DEPLOY_HOOK"
+          exit 1
+        fi
+        echo "✅ Render deploy hook configured"
+
+    - name: 🚀 Trigger Render Deployment
+      id: deploy
+      run: |
+        echo "🚀 Triggering Render deployment..."
+        echo "📝 Commit: ${{ github.sha }}"
+        echo "👤 Author: ${{ github.actor }}"
+        echo "🌿 Branch: ${{ github.ref_name }}"
+        
+        # Trigger deployment with retry logic
+        for i in {1..3}; do
+          echo "📡 Deployment attempt $i/3..."
+          
+          HTTP_CODE=$(curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}" \
+            -w "%{http_code}" \
+            -s \
+            -o /tmp/render_response.txt)
+          
+          echo "📊 HTTP Response Code: $HTTP_CODE"
+          
+          if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 201 ]; then
+            echo "✅ Deployment triggered successfully!"
+            echo "response=$(cat /tmp/render_response.txt)" >> $GITHUB_OUTPUT
+            break
+          else
+            echo "❌ Deployment trigger failed with HTTP $HTTP_CODE"
+            echo "Response: $(cat /tmp/render_response.txt)"
+            
+            if [ $i -eq 3 ]; then
+              echo "❌ All deployment attempts failed"
+              exit 1
+            else
+              echo "⏳ Retrying in 10 seconds..."
+              sleep 10
+            fi
+          fi
+        done
+
+    - name: ⏳ Wait for deployment to start
+      run: |
+        echo "⏳ Waiting for Render deployment to initialize..."
+        echo "🕐 This usually takes 2-5 minutes for Docker builds"
+        sleep 120  # Wait 2 minutes for deployment to start
+
+    - name: 🏥 Health Check with Retries
+      id: health-check
+      run: |
+        echo "🏥 Starting health check process..."
+        APP_URL="${{ vars.RENDER_APP_URL }}"
+        
+        if [ -z "$APP_URL" ]; then
+          echo "⚠️ RENDER_APP_URL not set, using fallback"
+          APP_URL="https://${{ secrets.RENDER_SERVICE_NAME }}.onrender.com"
+        fi
+        
+        echo "🌐 Checking URL: $APP_URL"
+        
+        # Health check with extended retries for Render cold starts
+        MAX_ATTEMPTS=20
+        WAIT_TIME=30
+        
+        for i in $(seq 1 $MAX_ATTEMPTS); do
+          echo "🔍 Health check attempt $i/$MAX_ATTEMPTS..."
+          
+          if curl -f --connect-timeout 15 --max-time 45 "$APP_URL/health" \
+             -H "User-Agent: GitHub-Actions-Health-Check" \
+             --silent --show-error; then
+            echo "✅ Health check passed!"
+            
+            # Additional API functionality test
+            echo "🧪 Testing spam classification endpoint..."
+            if curl -f -X POST "$APP_URL/api/v1/spam/classify" \
+              -H "Content-Type: application/json" \
+              -H "User-Agent: GitHub-Actions-API-Test" \
+              -d '{"text":"This is a test message for deployment verification"}' \
+              --connect-timeout 15 --max-time 45 --silent; then
+              echo "✅ API endpoint test passed!"
+              echo "deployment_success=true" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️ API test failed, but health check passed"
+              echo "deployment_success=partial" >> $GITHUB_OUTPUT
+            fi
+            break
+          else
+            echo "❌ Attempt $i failed"
+            
+            if [ $i -eq $MAX_ATTEMPTS ]; then
+              echo "❌ Health check failed after $MAX_ATTEMPTS attempts"
+              echo "🕐 Total wait time: $(($MAX_ATTEMPTS * $WAIT_TIME / 60)) minutes"
+              echo "deployment_success=false" >> $GITHUB_OUTPUT
+              
+              # Try to get service status if possible
+              echo "🔍 Attempting to diagnose the issue..."
+              curl -I "$APP_URL" --connect-timeout 10 --max-time 20 || echo "Connection failed"
+              exit 1
+            else
+              echo "⏳ Waiting ${WAIT_TIME}s before retry..."
+              sleep $WAIT_TIME
+            fi
+          fi
+        done
+
+    - name: 📊 Deployment Summary
+      if: always()
+      run: |
+        APP_URL="${{ vars.RENDER_APP_URL }}"
+        
+        echo "## 🎨 Render Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 🌐 **URL** | ${APP_URL:-'Check Render Dashboard'} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🏷️ **Environment** | ${{ github.ref == 'refs/heads/main' && 'Production' || 'Staging' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 📝 **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| 👤 **Deployed by** | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| ⏰ **Deploy Time** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🏥 **Health Status** | ${{ steps.health-check.outputs.deployment_success == 'true' && '✅ Healthy' || steps.health-check.outputs.deployment_success == 'partial' && '⚠️ Partial' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -n "$APP_URL" ]; then
+          echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [🏥 Health Check](${APP_URL}/health)" >> $GITHUB_STEP_SUMMARY
+          echo "- [📚 API Documentation](${APP_URL}/docs)" >> $GITHUB_STEP_SUMMARY
+          echo "- [📊 OpenAPI Spec](${APP_URL}/openapi.json)" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "- [🎨 Render Dashboard](https://dashboard.render.com/)" >> $GITHUB_STEP_SUMMARY
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 Render-Specific Notes" >> $GITHUB_STEP_SUMMARY
+        echo "- Free tier apps sleep after 15 minutes of inactivity" >> $GITHUB_STEP_SUMMARY
+        echo "- Cold starts may take 30-60 seconds" >> $GITHUB_STEP_SUMMARY
+        echo "- 750 hours/month free tier limit" >> $GITHUB_STEP_SUMMARY
+
+  # Notify on success
+  notify-success:
+    name: 📢 Success Notification
+    runs-on: ubuntu-latest
+    needs: [test, deploy]
+    if: success()
+    steps:
+    - name: 🎉 Deployment Successful
+      run: |
+        echo "## ✅ Render Deployment Successful! 🎉" >> $GITHUB_STEP_SUMMARY
+        echo "Your ML FastAPI backend has been successfully deployed to Render." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🧪 Test Your API" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+        echo "# Health check" >> $GITHUB_STEP_SUMMARY
+        echo "curl https://your-app.onrender.com/health" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Test spam classification" >> $GITHUB_STEP_SUMMARY
+        echo "curl -X POST 'https://your-app.onrender.com/api/v1/spam/classify' \\" >> $GITHUB_STEP_SUMMARY
+        echo "  -H 'Content-Type: application/json' \\" >> $GITHUB_STEP_SUMMARY
+        echo "  -d '{\"text\":\"Test message\"}'" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # Notify on failure
+  notify-failure:
+    name: 📢 Failure Notification
+    runs-on: ubuntu-latest
+    needs: [test, deploy]
+    if: failure()
+    steps:
+    - name: ❌ Deployment Failed
+      run: |
+        echo "## ❌ Render Deployment Failed" >> $GITHUB_STEP_SUMMARY
+        echo "The deployment to Render encountered an error." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔍 Common Issues & Solutions:" >> $GITHUB_STEP_SUMMARY
+        echo "| Issue | Solution |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|----------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Missing deploy hook | Get from Render Dashboard → Settings → Deploy Hook |" >> $GITHUB_STEP_SUMMARY
+        echo "| Build failures | Check Dockerfile and requirements.txt |" >> $GITHUB_STEP_SUMMARY
+        echo "| Health check timeout | App may be taking longer to start |" >> $GITHUB_STEP_SUMMARY
+        echo "| Model loading errors | Ensure models/ directory exists with .pkl files |" >> $GITHUB_STEP_SUMMARY
+        echo "| Memory issues | Consider upgrading Render plan |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📚 Debugging Steps:" >> $GITHUB_STEP_SUMMARY
+        echo "1. Check Render deployment logs in dashboard" >> $GITHUB_STEP_SUMMARY
+        echo "2. Verify all required secrets are set" >> $GITHUB_STEP_SUMMARY
+        echo "3. Test Docker build locally: \`docker build -t test apps/python-backend\`" >> $GITHUB_STEP_SUMMARY
+        echo "4. Ensure model files are included and accessible" >> $GITHUB_STEP_SUMMARY
