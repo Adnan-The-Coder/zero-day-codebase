@@ -4,21 +4,38 @@
   "defaultBase": "main",
   "targetDefaults": {
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["{projectRoot}/.next", "{projectRoot}/dist", "{projectRoot}/.wrangler"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "{projectRoot}/.next",
+        "{projectRoot}/dist",
+        "{projectRoot}/.wrangler"
+      ]
     },
     "lint": {
-      "inputs": ["default", "{projectRoot}/.eslintrc.json"]
+      "inputs": [
+        "default",
+        "{projectRoot}/.eslintrc.json"
+      ]
     },
     "test": {
-      "inputs": ["default", "^production"]
+      "inputs": [
+        "default",
+        "^production"
+      ]
     }
   },
   "tasksRunnerOptions": {
     "default": {
       "runner": "nx/tasks-runners/default",
       "options": {
-        "cacheableOperations": ["build", "lint", "test", "deploy"],
+        "cacheableOperations": [
+          "build",
+          "lint",
+          "test",
+          "deploy"
+        ],
         "parallel": 3
       }
     }
@@ -29,6 +46,7 @@
   },
   "projects": {
     "web": "apps/web",
+    "python-backend": "apps/python-backend",
     "cf-server": "apps/cf-server"
   }
 }

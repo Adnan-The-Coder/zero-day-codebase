@@ -22,7 +22,7 @@ importers:
         version: 5.3.0(chart.js@4.5.0)(react@19.0.0)
     devDependencies:
       nx:
-        specifier: ^21.4.1
+        specifier: 21.5.2
         version: 21.5.2
 
   apps/cf-server:
@@ -5988,7 +5988,7 @@ snapshots:
 
   dotenv-expand@11.0.7:
     dependencies:
-      dotenv: 16.4.7
+      dotenv: 16.6.1
 
   dotenv@16.4.7: {}
 

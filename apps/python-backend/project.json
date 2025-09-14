@@ -1,0 +1,50 @@
+{
+  "name": "python-backend",
+  "projectType": "application",
+  "sourceRoot": "apps/python-backend",
+  "targets": {
+    "serve": {
+      "executor": "@nx/python:run-commands",
+      "options": {
+        "command": "python main.py",
+        "cwd": "apps/python-backend"
+      }
+    },
+    "serve-dev": {
+      "executor": "@nx/python:run-commands",
+      "options": {
+        "command": "uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+        "cwd": "apps/python-backend"
+      }
+    },
+    "docker-build": {
+      "executor": "@nx/docker:build",
+      "options": {
+        "context": "apps/python-backend",
+        "dockerfile": "apps/python-backend/Dockerfile",
+        "tags": ["ml-backend:latest"]
+      }
+    },
+    "docker-run": {
+      "executor": "@nx/python:run-commands",
+      "options": {
+        "command": "docker-compose up -d",
+        "cwd": "apps/python-backend"
+      }
+    },
+    "test": {
+      "executor": "@nx/python:run-commands",
+      "options": {
+        "command": "python -m pytest tests/ -v",
+        "cwd": "apps/python-backend"
+      }
+    },
+    "lint": {
+      "executor": "@nx/python:run-commands",
+      "options": {
+        "command": "python -m flake8 app/ main.py",
+        "cwd": "apps/python-backend"
+      }
+    }
+  }
+}
