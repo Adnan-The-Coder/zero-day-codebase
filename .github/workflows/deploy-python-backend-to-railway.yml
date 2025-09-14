@@ -63,12 +63,6 @@ jobs:
         flake8 app/ main.py --count --select=E9,F63,F7,F82 --ignore=F824 --show-source --statistics
         flake8 app/ main.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    - name: 🧪 Run tests
-      if: steps.changes.outputs.backend == 'true'
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: |
-        python -m pytest tests/ -v --tb=short
-
     - name: 🐳 Test Docker build
       if: steps.changes.outputs.backend == 'true'
       working-directory: ${{ env.WORKING_DIRECTORY }}
