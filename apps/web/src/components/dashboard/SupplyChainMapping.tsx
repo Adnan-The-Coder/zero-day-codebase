@@ -70,7 +70,7 @@ export default function SupplyChainMapping({ onExport }: SupplyChainMappingProps
           {
             headers: {
               "X-OTX-API-KEY":
-                "df47d8267c6c941161a14ab7c615d2d5eba60cd5c8772a383f662e1a9035ceb5",
+                "c960b1173c7e99e1c08597bf783047e9dfda7a41e97b20fe5e1c0733e227e670",
             },
           }
         );
