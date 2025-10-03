@@ -7,7 +7,4 @@ export const API_ENDPOINTS = {
     getAllProfiles: `${API_BASE_URL}/user-profile/get-all-profiles`, // Fetching all userProfiles
     getProfileByUUID: (uuid: string) => `${API_BASE_URL}/user-profile/get/${uuid}`, // Fetching a specific userProfile by uuid
     updateProfileByUUID: (uuid: string) => `${API_BASE_URL}/user-profile/update/${uuid}`, // Updating a specific userProfile by uuid
-
-
-
 }   
